@@ -238,6 +238,7 @@ import EmptyState from '../components/ui/EmptyState.vue'
 import { useLang } from '../utils/useLang'
 import { usePermissions } from '../composables/usePermissions'
 import { useSettings } from '../composables/useSettings'
+import { useRealtimePoll } from '../composables/useRealtimePoll'
 
 const router = useRouter()
 const { lang } = useLang()
@@ -396,8 +397,6 @@ const groupedByWeek = computed(() => {
   return Array.from(map.values()).sort((a, b) => b.weekStart - a.weekStart)
 })
 
-let dashboardPollTimer = null
-
 const loadDashboard = async () => {
   try {
     const res = await axios.get('/api/admin/dashboard')
@@ -409,16 +408,11 @@ const loadDashboard = async () => {
   }
 }
 
-onMounted(async () => {
-  fetchSettings()
-  await fetchUser()
-  await loadDashboard()
-  dashboardPollTimer = setInterval(loadDashboard, 3500)
-  window.addEventListener('focus', loadDashboard)
-})
+useRealtimePoll(loadDashboard, { interval: 8000 })
 
-onUnmounted(() => {
-  if (dashboardPollTimer) clearInterval(dashboardPollTimer)
-  window.removeEventListener('focus', loadDashboard)
+onMounted(() => {
+  fetchSettings()
+  fetchUser().catch(() => {})
+  loadDashboard()
 })
 </script>

@@ -1,30 +1,32 @@
 <?php
 
-// Ensure /tmp folders exist for storage in serverless environments
+// Ensure /tmp folders exist for storage in serverless environments (cold-start only)
 $tmpStorage = '/tmp/storage';
-$dirs = [
-    $tmpStorage . '/framework/views',
-    $tmpStorage . '/framework/cache',
-    $tmpStorage . '/framework/sessions',
-    $tmpStorage . '/logs',
-    $tmpStorage . '/app',
-];
+if (!is_dir($tmpStorage . '/framework/views')) {
+    $dirs = [
+        $tmpStorage . '/framework/views',
+        $tmpStorage . '/framework/cache',
+        $tmpStorage . '/framework/sessions',
+        $tmpStorage . '/logs',
+        $tmpStorage . '/app',
+    ];
 
-foreach ($dirs as $dir) {
-    if (!is_dir($dir)) {
-        @mkdir($dir, 0755, true);
+    foreach ($dirs as $dir) {
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
     }
-}
 
-// Copy persistent app json files if present
-$sourceStorageApp = __DIR__ . '/../storage/app';
-if (is_dir($sourceStorageApp)) {
-    $files = ['settings.json', 'permissions.json', 'schedule_days_years.json', 'skills_groups_durations.json'];
-    foreach ($files as $file) {
-        $src = $sourceStorageApp . '/' . $file;
-        $dst = $tmpStorage . '/app/' . $file;
-        if (file_exists($src) && !file_exists($dst)) {
-            @copy($src, $dst);
+    // Copy persistent app json files if present
+    $sourceStorageApp = __DIR__ . '/../storage/app';
+    if (is_dir($sourceStorageApp)) {
+        $files = ['settings.json', 'permissions.json', 'schedule_days_years.json', 'skills_groups_durations.json'];
+        foreach ($files as $file) {
+            $src = $sourceStorageApp . '/' . $file;
+            $dst = $tmpStorage . '/app/' . $file;
+            if (file_exists($src) && !file_exists($dst)) {
+                @copy($src, $dst);
+            }
         }
     }
 }
