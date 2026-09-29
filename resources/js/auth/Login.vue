@@ -94,19 +94,6 @@
             {{ isSubmitting ? t.submittingBtn : (isAdminMode ? (lang === 'kh' ? 'ចូលគ្រប់គ្រង' : 'Sign In as Admin') : (lang === 'kh' ? 'ចូលប្រឡង' : 'Enter Exam Portal')) }}
           </Button>
         </div>
-
-        <!-- Divider & Register Link (Only for Candidates) -->
-        <div v-if="isRegistrationAllowed && !isAdminMode" class="pt-3 sm:pt-4 border-t border-slate-100 text-center">
-          <p class="text-xs text-slate-500 font-medium">
-            {{ t.noAccount }}
-            <RouterLink
-              to="/register"
-              class="font-bold text-blue-600 hover:text-blue-700 hover:underline ml-1"
-            >
-              {{ t.createAccount }}
-            </RouterLink>
-          </p>
-        </div>
       </form>
     </Card>
   </PublicLayout>
