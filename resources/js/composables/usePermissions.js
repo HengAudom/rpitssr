@@ -93,6 +93,7 @@ export function usePermissions() {
 
   return {
     currentUser,
+    user: currentUser,
     userPermissions,
     isLoadingUser,
     isSuperAdmin,

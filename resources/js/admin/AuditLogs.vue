@@ -272,16 +272,13 @@ import { useRealtimePoll } from '../composables/useRealtimePoll'
 
 const { lang } = useLang()
 const { success: toastSuccess, error: toastError } = useToast()
-const { can, user } = usePermissions()
-
-const isSuperAdmin = computed(() => {
-  return user.value?.role === 'Super Admin' || user.value?.role === 'SuperAdmin'
-})
+const { can, isSuperAdmin, currentUser, fetchUser } = usePermissions()
 
 const pageSize = 12
 const currentPage = ref(1)
 
-const logs = ref(fastCache.get('auditLogs') || [])
+const initialLogs = fastCache.get('auditLogs')
+const logs = ref(Array.isArray(initialLogs) ? initialLogs : [])
 const initialLoading = ref(!logs.value.length)
 const searchQuery = ref('')
 const filterModule = ref('')
@@ -363,7 +360,9 @@ const t = computed(() => {
 })
 
 const filteredLogs = computed(() => {
-  return logs.value.filter(item => {
+  const list = Array.isArray(logs.value) ? logs.value : []
+  return list.filter(item => {
+    if (!item) return false
     const q = searchQuery.value.toLowerCase().trim()
     const matchesSearch = !q ||
       (item.user && item.user.toLowerCase().includes(q)) ||
@@ -432,9 +431,12 @@ const clearAllLogs = async () => {
 }
 
 const loadLogs = async (isBackground = false) => {
+  if (!currentUser.value) {
+    fetchUser().catch(() => {})
+  }
   try {
     const res = await axios.get('/api/admin/audit-logs')
-    logs.value = res.data.logs || []
+    logs.value = Array.isArray(res.data?.logs) ? res.data.logs : []
     fastCache.set('auditLogs', logs.value)
   } catch (e) {
     if (!isBackground) {
