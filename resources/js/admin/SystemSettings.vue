@@ -99,8 +99,7 @@
           </div>
 
           <div class="pt-3 border-t border-slate-100">
-
-            <label class="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/60 transition-colors select-none">
+            <label class="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 cursor-pointer hover:bg-slate-100/60 transition-colors select-none max-w-xl">
               <input
                 type="checkbox"
                 v-model="form.forceStrongPassword"
@@ -253,8 +252,10 @@ const t = computed(() => {
       timezone: 'ល្វែងម៉ោង (Timezone)',
       defaultLanguage: 'ភាសាលំនាំដើម',
       authTitle: 'សុវត្ថិភាព & ការចូលប្រើប្រាស់',
-      authSubtitle: 'កំណត់ពេលវេលាកំណត់ Session និងគោលការណ៍ពាក្យសម្ងាត់',
+      authSubtitle: 'កំណត់ពេលវេលាកំណត់ Session និងការចុះឈ្មោះ',
       sessionTimeout: 'កំណត់ពេលវេលាអសកម្ម Session (នាទី)',
+      allowSelfReg: 'អនុញ្ញាតឲ្យសិស្សចុះឈ្មោះបង្កើតគណនីដោយខ្លួនឯង',
+      allowSelfRegDesc: 'បើកទំព័រ Register សម្រាប់សិស្សថ្មីចុះឈ្មោះ',
       forceStrongPass: 'តម្រូវឲ្យពាក្យសម្ងាត់មានសុវត្ថិភាពខ្ពស់',
       forceStrongPassDesc: 'ពាក្យសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ ខ្ទង់',
       examRulesTitle: 'គោលការណ៍ប្រឡង & Anti-Cheat',
@@ -284,8 +285,10 @@ const t = computed(() => {
     timezone: 'Timezone',
     defaultLanguage: 'Default Language',
     authTitle: 'Authentication & Session Security',
-    authSubtitle: 'Session timeout rules and password security policies',
+    authSubtitle: 'Session timeout rules and self-enrollment toggles',
     sessionTimeout: 'Inactivity Session Timeout (Minutes)',
+    allowSelfReg: 'Enable Student Self-Registration',
+    allowSelfRegDesc: 'Permits new examinees to register from the public portal',
     forceStrongPass: 'Enforce Strong Passwords',
     forceStrongPassDesc: 'Requires minimum 6 characters for all accounts',
     examRulesTitle: 'Assessment & Anti-Cheat Controls',
@@ -309,6 +312,7 @@ const loadSettings = async () => {
   try {
     const res = await axios.get('/api/admin/system-settings')
     Object.assign(form, res.data.settings)
+    form.allowRegistration = false
   } catch (e) {
     toastError('Failed to load system settings.')
   } finally {
@@ -318,11 +322,13 @@ const loadSettings = async () => {
 
 const saveSettings = async () => {
   saving.value = true
+  form.allowRegistration = false
   try {
     const res = await axios.post('/api/admin/system-settings', form)
     toastSuccess(lang.value === 'kh' ? 'រក្សាទុកការកំណត់ប្រព័ន្ធបានជោគជ័យ!' : 'System settings updated successfully!')
     if (res.data.settings) {
       Object.assign(form, res.data.settings)
+      form.allowRegistration = false
     }
     await fetchSettings(true)
     broadcastSync('settings_updated', res.data.settings)

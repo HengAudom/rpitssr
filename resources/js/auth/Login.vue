@@ -51,14 +51,6 @@
               required
               @input="errorMessage = ''"
             />
-            <div class="flex justify-end pt-0.5">
-              <RouterLink
-                to="/forgot-password"
-                class="text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
-              >
-                {{ lang === 'kh' ? 'ភ្លេចពាក្យសម្ងាត់?' : 'Forgot password?' }}
-              </RouterLink>
-            </div>
           </div>
         </Transition>
 
@@ -117,11 +109,9 @@ import Input from '../components/ui/Input.vue'
 import PasswordInput from '../components/ui/PasswordInput.vue'
 import Button from '../components/ui/Button.vue'
 import { useLang } from '../utils/useLang'
-import { useSettings } from '../composables/useSettings'
 
 const router = useRouter()
 const { lang } = useLang()
-const { settings, fetchSettings } = useSettings()
 
 const form = reactive({
   username: '',
@@ -176,7 +166,6 @@ const onUsernameInput = () => {
 }
 
 onMounted(() => {
-  fetchSettings(true)
   const saved = localStorage.getItem('saved_login_username')
   if (saved) {
     form.username = saved

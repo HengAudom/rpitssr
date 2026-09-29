@@ -539,7 +539,7 @@ class AdminController extends Controller
             $defaults['portalTitle'] = $defaults['portalTitle'] ?? $defaults['institutionName'];
         }
 
-        $defaults['allowRegistration'] = false;
+        $defaults['allowRegistration'] = filter_var($defaults['allowRegistration'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $defaults['forceStrongPassword'] = filter_var($defaults['forceStrongPassword'] ?? true, FILTER_VALIDATE_BOOLEAN);
         $defaults['antiCheatPause'] = filter_var($defaults['antiCheatPause'] ?? true, FILTER_VALIDATE_BOOLEAN);
         $defaults['autoSubmitOnTimeout'] = filter_var($defaults['autoSubmitOnTimeout'] ?? true, FILTER_VALIDATE_BOOLEAN);
@@ -621,6 +621,7 @@ class AdminController extends Controller
             $data['portalTitle'] = $data['institutionName'];
         }
 
+        $data['allowRegistration'] = false;
         $merged = array_merge($existing, $data);
         $merged['allowRegistration'] = false;
 

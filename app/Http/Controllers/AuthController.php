@@ -602,73 +602,23 @@ class AuthController extends Controller
 
     public function verifyIdentity(Request $request)
     {
-        return $this->verifyPhone($request);
+        return response()->json([
+            'message' => 'មុខងារកំណត់ពាក្យសម្ងាត់ឡើងវិញត្រូវបានបិទ (Password reset is disabled).'
+        ], 403);
     }
 
     public function resetPassword(Request $request)
     {
-        $data = $request->validate([
-            'username' => ['nullable', 'string'],
-            'phone'    => ['nullable', 'string'],
-            'password' => ['required', 'string', 'min:6'],
-            'reset_token' => ['nullable', 'string'],
-        ]);
-
-        $token = $request->input('reset_token');
-        $targetUser = null;
-
-        if ($token) {
-            try {
-                $cached = \Illuminate\Support\Facades\Cache::store('database')->pull('pw_reset_' . $token);
-            } catch (\Throwable $e) {
-                $cached = \Illuminate\Support\Facades\Cache::pull('pw_reset_' . $token);
-            }
-
-            if (!$cached) {
-                return response()->json([
-                    'message' => 'Reset token ផុតកំណត់ ឬមិនត្រឹមត្រូវឡើយ សូមផ្ទៀងផ្ទាត់ម្តងទៀត (Reset token expired or invalid).'
-                ], 422);
-            }
-
-            if (!empty($cached['admin_id'])) {
-                $targetUser = Admin::find($cached['admin_id']);
-            } elseif (!empty($cached['student_id'])) {
-                $targetUser = Student::find($cached['student_id']);
-            }
-        } else {
-            // Direct verification fallback
-            $username   = trim((string)$request->input('username'));
-            $phoneInput = preg_replace('/[^0-9]/', '', (string)$request->input('phone'));
-
-            if (!$username || !$phoneInput) {
-                return response()->json(['message' => 'ព័ត៌មានមិនត្រឹមត្រូវ (Invalid reset request).'], 422);
-            }
-
-            $admin = Admin::whereRaw('LOWER(Username) = ?', [strtolower($username)])->first();
-            if ($admin) {
-                $adminPhone = preg_replace('/[^0-9]/', '', $admin->Phone ?? '');
-                if ($adminPhone && (str_ends_with($adminPhone, $phoneInput) || str_ends_with($phoneInput, $adminPhone))) {
-                    $targetUser = $admin;
-                }
-            }
-        }
-
-        if (!$targetUser) {
-            return response()->json(['message' => 'ព័ត៌មានមិនត្រឹមត្រូវ (Invalid reset request).'], 422);
-        }
-
-        $targetUser->Password = Hash::make($data['password']);
-        $targetUser->save();
-
         return response()->json([
-            'message' => 'ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ! (Password changed successfully)',
-            'redirect' => '/login',
-        ]);
+            'message' => 'មុខងារកំណត់ពាក្យសម្ងាត់ឡើងវិញត្រូវបានបិទ (Password reset is disabled).'
+        ], 403);
     }
 
     public function forgotPassword(Request $request)
     {
-        return $this->resetPassword($request);
+        return response()->json([
+            'message' => 'មុខងារកំណត់ពាក្យសម្ងាត់ឡើងវិញត្រូវបានបិទ (Password reset is disabled).'
+        ], 403);
     }
     public function uploadProfileImage(Request $request)
     {

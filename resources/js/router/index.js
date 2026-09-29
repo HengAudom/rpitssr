@@ -1,7 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../auth/Login.vue'
-import Register from '../auth/Register.vue'
-import ForgotPassword from '../auth/ForgotPassword.vue'
 import axios from 'axios'
 import { usePermissions } from '../composables/usePermissions'
 
@@ -21,12 +19,11 @@ const routes = [
   },
   {
     path: '/forgot-password',
-    name: 'ForgotPassword',
-    component: ForgotPassword
+    redirect: '/login'
   },
   {
     path: '/reset-password',
-    redirect: '/forgot-password'
+    redirect: '/login'
   },
 
   // ── Admin & Super Admin ───────────────────────────────────────────
