@@ -483,7 +483,7 @@ class AdminController extends Controller
 
             $dir = storage_path('app');
             if (!is_dir($dir)) {
-                mkdir($dir, 0755, true);
+                @mkdir($dir, 0755, true);
             }
             file_put_contents(storage_path('app/permissions.json'), json_encode($permissions, JSON_PRETTY_PRINT));
         }
@@ -580,7 +580,7 @@ class AdminController extends Controller
 
         $dir = storage_path('app');
         if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
+            @mkdir($dir, 0755, true);
         }
 
         $settingsFile = storage_path('app/settings.json');
@@ -649,7 +649,7 @@ class AdminController extends Controller
 
         $dir = storage_path('app');
         if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
+            @mkdir($dir, 0755, true);
         }
         file_put_contents($filePath, json_encode($default, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         return $default;
@@ -744,7 +744,7 @@ class AdminController extends Controller
 
         $dir = storage_path('app');
         if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
+            @mkdir($dir, 0755, true);
         }
 
         $filePath = storage_path('app/schedule_days_years.json');
@@ -1049,7 +1049,7 @@ class AdminController extends Controller
 
         $dir = storage_path('app');
         if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
+            @mkdir($dir, 0755, true);
         }
         file_put_contents($filePath, json_encode($default, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         return $default;
@@ -1086,7 +1086,7 @@ class AdminController extends Controller
 
         $dir = storage_path('app');
         if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
+            @mkdir($dir, 0755, true);
         }
         file_put_contents(storage_path('app/skills_groups_durations.json'), json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
@@ -1404,7 +1404,8 @@ class AdminController extends Controller
         } else {
             $currentUser = auth()->user();
             $isSelectingSuperAdmin = in_array($request->input('role'), ['Super Admin', 'SuperAdmin']);
-            $isCurrentSuperAdmin = $currentUser && in_array($currentUser->role, ['Super Admin', 'SuperAdmin']);
+            $currentRole = $currentUser ? ($currentUser->Role ?? $currentUser->role ?? '') : '';
+            $isCurrentSuperAdmin = in_array($currentRole, ['Super Admin', 'SuperAdmin']);
 
             if ($isSelectingSuperAdmin && !$isCurrentSuperAdmin) {
                 return response()->json(['message' => 'Unauthorized. Only Super Admins can assign Super Admin role.'], 403);
@@ -1853,14 +1854,22 @@ class AdminController extends Controller
 
     private function processUploadedPhoto($photoInput, $uploadedFile = null): ?string
     {
+        if (empty($photoInput) && empty($uploadedFile)) {
+            return null;
+        }
+
+        if (!empty($photoInput) && is_string($photoInput) && str_starts_with($photoInput, '/uploads/')) {
+            return $photoInput;
+        }
+
         $uploadDir = public_path('uploads/profiles');
         if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
+            @mkdir($uploadDir, 0755, true);
         }
 
         if ($uploadedFile && $uploadedFile->isValid()) {
             $filename = time() . '_' . uniqid() . '.' . $uploadedFile->getClientOriginalExtension();
-            $uploadedFile->move($uploadDir, $filename);
+            @$uploadedFile->move($uploadDir, $filename);
             return '/uploads/profiles/' . $filename;
         }
 
@@ -1872,13 +1881,9 @@ class AdminController extends Controller
                 if (str_contains($parts[0], 'png')) $ext = 'png';
                 if (str_contains($parts[0], 'webp')) $ext = 'webp';
                 $filename = time() . '_' . uniqid() . '.' . $ext;
-                file_put_contents($uploadDir . '/' . $filename, $data);
+                @file_put_contents($uploadDir . '/' . $filename, $data);
                 return '/uploads/profiles/' . $filename;
             }
-        }
-
-        if (!empty($photoInput) && is_string($photoInput) && str_starts_with($photoInput, '/uploads/')) {
-            return $photoInput;
         }
 
         return null;

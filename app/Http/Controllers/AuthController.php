@@ -71,7 +71,7 @@ class AuthController extends Controller
 
             $dir = storage_path('app');
             if (!is_dir($dir)) {
-                mkdir($dir, 0755, true);
+                @mkdir($dir, 0755, true);
             }
             $file = storage_path('app/login_logs.json');
             $logs = file_exists($file) ? (json_decode(file_get_contents($file), true) ?: []) : [];
@@ -647,7 +647,7 @@ class AuthController extends Controller
             $destinationPath = public_path('uploads/profiles');
 
             if (!file_exists($destinationPath)) {
-                mkdir($destinationPath, 0755, true);
+                @mkdir($destinationPath, 0755, true);
             }
 
             $sourcePath = $file->getRealPath();
@@ -762,14 +762,22 @@ class AuthController extends Controller
 
     private function processUploadedPhoto($photoInput, $uploadedFile = null): ?string
     {
+        if (empty($photoInput) && empty($uploadedFile)) {
+            return null;
+        }
+
+        if (!empty($photoInput) && is_string($photoInput) && str_starts_with($photoInput, '/uploads/')) {
+            return $photoInput;
+        }
+
         $uploadDir = public_path('uploads/profiles');
         if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
+            @mkdir($uploadDir, 0755, true);
         }
 
         if ($uploadedFile && $uploadedFile->isValid()) {
             $filename = time() . '_' . uniqid() . '.' . $uploadedFile->getClientOriginalExtension();
-            $uploadedFile->move($uploadDir, $filename);
+            @$uploadedFile->move($uploadDir, $filename);
             return '/uploads/profiles/' . $filename;
         }
 
@@ -781,13 +789,9 @@ class AuthController extends Controller
                 if (str_contains($parts[0], 'png')) $ext = 'png';
                 if (str_contains($parts[0], 'webp')) $ext = 'webp';
                 $filename = time() . '_' . uniqid() . '.' . $ext;
-                file_put_contents($uploadDir . '/' . $filename, $data);
+                @file_put_contents($uploadDir . '/' . $filename, $data);
                 return '/uploads/profiles/' . $filename;
             }
-        }
-
-        if (!empty($photoInput) && is_string($photoInput) && str_starts_with($photoInput, '/uploads/')) {
-            return $photoInput;
         }
 
         return null;
