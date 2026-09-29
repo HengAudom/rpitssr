@@ -539,7 +539,7 @@ class AdminController extends Controller
             $defaults['portalTitle'] = $defaults['portalTitle'] ?? $defaults['institutionName'];
         }
 
-        $defaults['allowRegistration'] = filter_var($defaults['allowRegistration'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $defaults['allowRegistration'] = false;
         $defaults['forceStrongPassword'] = filter_var($defaults['forceStrongPassword'] ?? true, FILTER_VALIDATE_BOOLEAN);
         $defaults['antiCheatPause'] = filter_var($defaults['antiCheatPause'] ?? true, FILTER_VALIDATE_BOOLEAN);
         $defaults['autoSubmitOnTimeout'] = filter_var($defaults['autoSubmitOnTimeout'] ?? true, FILTER_VALIDATE_BOOLEAN);
@@ -622,6 +622,7 @@ class AdminController extends Controller
         }
 
         $merged = array_merge($existing, $data);
+        $merged['allowRegistration'] = false;
 
         // 1. Save to Database (persists across all Vercel serverless containers!)
         try {

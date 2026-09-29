@@ -123,10 +123,6 @@ const router = useRouter()
 const { lang } = useLang()
 const { settings, fetchSettings } = useSettings()
 
-const isRegistrationAllowed = computed(() => {
-  return settings.allowRegistration === true || settings.allowRegistration === 'true' || settings.allowRegistration === 1 || settings.allowRegistration === '1'
-})
-
 const form = reactive({
   username: '',
   password: ''
