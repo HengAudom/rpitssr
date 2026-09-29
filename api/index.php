@@ -41,4 +41,13 @@ $_SERVER['PHP_SELF'] = '/index.php';
 unset($_SERVER['PATH_INFO']);
 unset($_SERVER['ORIG_SCRIPT_NAME']);
 
+// Ensure REMOTE_ADDR is always a valid non-empty string to prevent Symfony IpUtils TypeError on Vercel
+if (empty($_SERVER['REMOTE_ADDR']) || !is_string($_SERVER['REMOTE_ADDR'])) {
+    $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['HTTP_X_REAL_IP'] ?? $_SERVER['HTTP_CLIENT_IP'] ?? '127.0.0.1';
+    if (is_string($forwarded) && str_contains($forwarded, ',')) {
+        $forwarded = trim(explode(',', $forwarded)[0]);
+    }
+    $_SERVER['REMOTE_ADDR'] = (!empty($forwarded) && is_string($forwarded)) ? $forwarded : '127.0.0.1';
+}
+
 require __DIR__ . '/../public/index.php';

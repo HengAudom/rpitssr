@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ \App\Http\Controllers\AdminController::getSystemSettings()['institutionName'] ?? 'Scholarship' }}</title>
+    <title>RPITSSR - Scholarship Exam Portal</title>
 
     <!-- Preload Local Material Symbols WOFF2 font for 0ms icon render -->
     <link rel="preload" href="{{ asset('fonts/material-symbols-outlined.woff2') }}" as="font" type="font/woff2" crossorigin>

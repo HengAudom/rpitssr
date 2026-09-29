@@ -56,6 +56,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
                     'message' => 'ទម្រង់ទិន្នន័យមិនត្រឹមត្រូវ (Invalid parameter format).'
                 ], 422);
             }
+            return response()->view('welcome');
         });
 
         $exceptions->render(function (\ErrorException $e, \Illuminate\Http\Request $request) {
@@ -76,6 +77,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
                         'message' => 'មិនអាចភ្ជាប់ទៅកាន់ Database បានទេ (សូមពិនិត្យមើល MySQL Server)។',
                         'error' => 'Database connection error'
                     ], 503);
+                }
+            } else {
+                if ($e instanceof \PDOException || $e instanceof \Illuminate\Database\QueryException) {
+                    return response()->view('welcome');
                 }
             }
         });
