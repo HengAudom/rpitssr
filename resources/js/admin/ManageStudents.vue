@@ -512,6 +512,7 @@
       :subtitle="excelAction === 'export' ? (lang === 'kh' ? 'ជ្រើសរើសតម្រងឆ្នាំសិក្សា វេនប្រឡង ឬស្ថានភាពសម្រាប់ទាញយក' : 'Filter by academic year, shift, or status before exporting') : (lang === 'kh' ? 'ទាញយកគម្រូ បំពេញទិន្នន័យ និងបញ្ចូលឯកសារ Excel (.xlsx)' : 'Download template, fill data, and upload Excel (.xlsx)')"
       max-width="3xl"
       :overflow-visible="excelAction === 'export'"
+      body-class="p-4 sm:p-6 overflow-y-auto"
     >
       <div class="space-y-4">
         <!-- Operation Selector (Export vs Import) -->
@@ -691,31 +692,77 @@
                 <span class="material-symbols-outlined text-base text-emerald-600">table_rows</span>
                 <span>{{ lang === 'kh' ? 'ទិន្នន័យបានពិនិត្យ' : 'Preview Data' }} ({{ parsedStudents.length }} {{ lang === 'kh' ? 'នាក់' : 'candidates' }})</span>
               </span>
-              <button
-                type="button"
-                @click="clearImport"
-                class="text-red-600 hover:text-red-700 hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
-              >
-                <span class="material-symbols-outlined text-sm">delete_sweep</span>
-                <span>{{ lang === 'kh' ? 'សម្អាត' : 'Clear' }}</span>
-              </button>
+
+              <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Navigation arrow buttons for smooth horizontal scrolling -->
+                <div class="inline-flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                  <button
+                    type="button"
+                    @click="scrollPreviewTable('left')"
+                    :disabled="!canScrollPreviewLeft"
+                    class="w-7 h-7 flex items-center justify-center rounded-md text-slate-600 hover:text-emerald-700 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-2xs cursor-pointer"
+                    :title="lang === 'kh' ? 'រំកិលទៅឆ្វេង' : 'Scroll Left'"
+                  >
+                    <span class="material-symbols-outlined text-base">chevron_left</span>
+                  </button>
+                  <span class="text-[10px] text-slate-300 font-mono select-none">|</span>
+                  <button
+                    type="button"
+                    @click="scrollPreviewTable('right')"
+                    :disabled="!canScrollPreviewRight"
+                    class="w-7 h-7 flex items-center justify-center rounded-md text-slate-600 hover:text-emerald-700 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-2xs cursor-pointer"
+                    :title="lang === 'kh' ? 'រំកិលទៅស្ដាំ' : 'Scroll Right'"
+                  >
+                    <span class="material-symbols-outlined text-base">chevron_right</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  @click="clearImport"
+                  class="text-red-600 hover:text-red-700 hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                  <span>{{ lang === 'kh' ? 'សម្អាត' : 'Clear' }}</span>
+                </button>
+              </div>
             </div>
 
-            <!-- Scrollable Table Container (Vertical scroll up to 280px + Horizontal scroll) -->
-            <div class="relative border border-slate-200/90 rounded-2xl overflow-hidden bg-white shadow-2xs">
-              <div class="max-h-64 sm:max-h-72 overflow-y-auto overflow-x-auto divide-y divide-slate-100">
-                <table class="min-w-[680px] w-full text-xs text-left">
+            <!-- Scrollable Table Container (Vertical scroll up to 280px + Horizontal scroll with drag & touch pan) -->
+            <div class="relative border border-slate-200/90 rounded-2xl overflow-hidden bg-white shadow-2xs group">
+              <!-- Left / Right subtle fade shadows indicating more content to scroll -->
+              <div
+                v-show="canScrollPreviewLeft"
+                class="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-slate-900/10 to-transparent pointer-events-none z-20 transition-opacity"
+              ></div>
+              <div
+                v-show="canScrollPreviewRight"
+                class="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-900/10 to-transparent pointer-events-none z-20 transition-opacity"
+              ></div>
+
+              <div
+                ref="previewTableContainer"
+                @scroll="handlePreviewTableScroll"
+                @mousedown="handleTableMouseDown"
+                @mousemove="handleTableMouseMove"
+                @mouseup="handleTableMouseUp"
+                @mouseleave="handleTableMouseLeave"
+                class="max-h-64 sm:max-h-72 overflow-y-auto overflow-x-auto divide-y divide-slate-100 select-none custom-table-scrollbar"
+                :class="isDraggingTable ? 'cursor-grabbing' : 'cursor-grab'"
+                style="touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;"
+              >
+                <table class="min-w-[880px] w-full text-xs text-left border-collapse">
                   <thead class="bg-slate-100/95 backdrop-blur-xs sticky top-0 z-10 font-bold text-slate-700 border-b border-slate-200 shadow-2xs">
                     <tr>
-                      <th class="px-3.5 py-2.5 text-center w-12">#</th>
-                      <th class="px-3.5 py-2.5">Student ID</th>
-                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'នាមខ្លួន' : 'First Name' }}</th>
-                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'គោត្តនាម' : 'Last Name' }}</th>
-                      <th class="px-3.5 py-2.5 text-center">{{ lang === 'kh' ? 'ភេទ' : 'Gender' }}</th>
-                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'ទូរស័ព្ទ' : 'Phone' }}</th>
-                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'វេនប្រឡង' : 'Exam Shift' }}</th>
-                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'ថ្ងៃប្រឡង' : 'Exam Day' }}</th>
-                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'ឆ្នាំសិក្សា' : 'Academic Year' }}</th>
+                      <th class="px-3.5 py-2.5 text-center w-12 whitespace-nowrap">#</th>
+                      <th class="px-3.5 py-2.5 whitespace-nowrap">Student ID</th>
+                      <th class="px-3.5 py-2.5 whitespace-nowrap">{{ lang === 'kh' ? 'នាមខ្លួន' : 'First Name' }}</th>
+                      <th class="px-3.5 py-2.5 whitespace-nowrap">{{ lang === 'kh' ? 'គោត្តនាម' : 'Last Name' }}</th>
+                      <th class="px-3.5 py-2.5 text-center whitespace-nowrap">{{ lang === 'kh' ? 'ភេទ' : 'Gender' }}</th>
+                      <th class="px-3.5 py-2.5 whitespace-nowrap">{{ lang === 'kh' ? 'ទូរស័ព្ទ' : 'Phone' }}</th>
+                      <th class="px-3.5 py-2.5 whitespace-nowrap">{{ lang === 'kh' ? 'វេនប្រឡង' : 'Exam Shift' }}</th>
+                      <th class="px-3.5 py-2.5 whitespace-nowrap">{{ lang === 'kh' ? 'ថ្ងៃប្រឡង' : 'Exam Day' }}</th>
+                      <th class="px-3.5 py-2.5 whitespace-nowrap">{{ lang === 'kh' ? 'ឆ្នាំសិក្សា' : 'Academic Year' }}</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-100 bg-white">
@@ -724,15 +771,15 @@
                       :key="idx"
                       class="hover:bg-slate-50/80 transition-colors"
                     >
-                      <td class="px-3.5 py-2 text-slate-400 font-mono text-center">{{ idx + 1 }}</td>
-                      <td class="px-3.5 py-2 font-mono font-bold text-blue-600">{{ s.studentCode || '-' }}</td>
-                      <td class="px-3.5 py-2 font-medium text-slate-900">{{ s.firstName }}</td>
-                      <td class="px-3.5 py-2 font-medium text-slate-900">{{ s.lastName }}</td>
-                      <td class="px-3.5 py-2 text-center">
+                      <td class="px-3.5 py-2 text-slate-400 font-mono text-center whitespace-nowrap">{{ idx + 1 }}</td>
+                      <td class="px-3.5 py-2 font-mono font-bold text-blue-600 whitespace-nowrap">{{ s.studentCode || '-' }}</td>
+                      <td class="px-3.5 py-2 font-medium text-slate-900 whitespace-nowrap">{{ s.firstName }}</td>
+                      <td class="px-3.5 py-2 font-medium text-slate-900 whitespace-nowrap">{{ s.lastName }}</td>
+                      <td class="px-3.5 py-2 text-center whitespace-nowrap">
                         <span
                           v-if="s.gender"
                           :class="[
-                            'px-2 py-0.5 rounded-md text-[10px] font-bold',
+                            'px-2 py-0.5 rounded-md text-[10px] font-bold inline-block',
                             s.gender === 'Female' || s.gender === 'ស្រី'
                               ? 'bg-rose-50 text-rose-700 border border-rose-200/60'
                               : 'bg-blue-50 text-blue-700 border border-blue-200/60'
@@ -742,20 +789,23 @@
                         </span>
                         <span v-else class="text-slate-400">-</span>
                       </td>
-                      <td class="px-3.5 py-2 font-mono text-slate-600">{{ s.phone || '-' }}</td>
-                      <td class="px-3.5 py-2 text-slate-600">{{ s.sessionName || '-' }}</td>
-                      <td class="px-3.5 py-2 text-slate-600">{{ s.examDay || '-' }}</td>
-                      <td class="px-3.5 py-2 text-slate-600 font-mono">{{ s.academicYear || '-' }}</td>
+                      <td class="px-3.5 py-2 font-mono text-slate-600 whitespace-nowrap">{{ s.phone || '-' }}</td>
+                      <td class="px-3.5 py-2 text-slate-600 whitespace-nowrap">{{ s.sessionName || '-' }}</td>
+                      <td class="px-3.5 py-2 text-slate-600 whitespace-nowrap">{{ s.examDay || '-' }}</td>
+                      <td class="px-3.5 py-2 text-slate-600 font-mono whitespace-nowrap">{{ s.academicYear || '-' }}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <!-- Footer count & summary -->
-            <div class="flex items-center justify-between text-[11px] text-slate-500 px-1 pt-0.5">
-              <span>{{ lang === 'kh' ? 'បញ្ជីទិន្នន័យបេក្ខជនទាំងអស់ដែលបាន Upload' : 'Scroll to view all uploaded candidates' }}</span>
-              <span class="font-bold text-slate-700 font-mono">{{ parsedStudents.length }} {{ lang === 'kh' ? 'នាក់សរុប' : 'candidates total' }}</span>
+            <!-- Footer count & summary with swipe instruction -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-slate-500 px-1 pt-0.5">
+              <span class="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
+                <span class="material-symbols-outlined text-sm">swipe</span>
+                <span>{{ lang === 'kh' ? 'អូសទៅឆ្វេង-ស្ដាំ ឬចុចប៊ូតុង ◂ ▸ ដើម្បីមើលជួរឈរទាំងអស់' : 'Swipe left-right or click ◂ ▸ buttons to view all columns' }}</span>
+              </span>
+              <span class="font-bold text-slate-700 font-mono shrink-0">{{ parsedStudents.length }} {{ lang === 'kh' ? 'នាក់សរុប' : 'candidates total' }}</span>
             </div>
           </div>
         </div>
@@ -804,7 +854,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import axios from 'axios'
 import Card from '../components/ui/Card.vue'
 import Button from '../components/ui/Button.vue'
@@ -951,6 +1001,70 @@ const importedFileName = ref('')
 const parsedStudents = ref([])
 const isImporting = ref(false)
 const excelFileInput = ref(null)
+
+// Preview Table Horizontal Drag & Arrow Navigation Logic
+const previewTableContainer = ref(null)
+const isDraggingTable = ref(false)
+const dragStartX = ref(0)
+const dragScrollLeft = ref(0)
+const canScrollPreviewLeft = ref(false)
+const canScrollPreviewRight = ref(false)
+
+const updatePreviewTableScrollState = () => {
+  if (!previewTableContainer.value) return
+  const el = previewTableContainer.value
+  canScrollPreviewLeft.value = el.scrollLeft > 10
+  canScrollPreviewRight.value = el.scrollLeft < (el.scrollWidth - el.clientWidth - 10)
+}
+
+const handlePreviewTableScroll = () => {
+  updatePreviewTableScrollState()
+}
+
+const scrollPreviewTable = (direction) => {
+  if (!previewTableContainer.value) return
+  const el = previewTableContainer.value
+  const distance = direction === 'left' ? -240 : 240
+  el.scrollBy({ left: distance, behavior: 'smooth' })
+  setTimeout(updatePreviewTableScrollState, 350)
+}
+
+const handleTableMouseDown = (e) => {
+  if (e.button !== 0) return
+  if (!previewTableContainer.value) return
+  isDraggingTable.value = true
+  dragStartX.value = e.pageX - previewTableContainer.value.offsetLeft
+  dragScrollLeft.value = previewTableContainer.value.scrollLeft
+}
+
+const handleTableMouseMove = (e) => {
+  if (!isDraggingTable.value || !previewTableContainer.value) return
+  e.preventDefault()
+  const x = e.pageX - previewTableContainer.value.offsetLeft
+  const walk = (x - dragStartX.value) * 1.5
+  previewTableContainer.value.scrollLeft = dragScrollLeft.value - walk
+  updatePreviewTableScrollState()
+}
+
+const handleTableMouseUp = () => {
+  if (isDraggingTable.value) {
+    isDraggingTable.value = false
+    updatePreviewTableScrollState()
+  }
+}
+
+const handleTableMouseLeave = () => {
+  if (isDraggingTable.value) {
+    isDraggingTable.value = false
+    updatePreviewTableScrollState()
+  }
+}
+
+watch(parsedStudents, () => {
+  nextTick(() => {
+    setTimeout(updatePreviewTableScrollState, 150)
+  })
+})
 
 const clearImport = () => {
   importedFileName.value = ''
@@ -1134,7 +1248,7 @@ const submitImport = async () => {
       students: parsedStudents.value
     })
     toastSuccess(lang.value === 'kh' ? `បាននាំចូលបេក្ខជន ${res.data.imported || parsedStudents.value.length} នាក់ដោយជោគជ័យ!` : `Imported ${res.data.imported || parsedStudents.value.length} candidates successfully!`)
-    showImportModal.value = false
+    showExcelModal.value = false
     clearImport()
     broadcastSync('students_updated')
     await loadData()
@@ -1546,5 +1660,28 @@ useRealtimePoll(loadData, { interval: 4000, listenEvents: ['students_updated', '
 
 onMounted(() => {
   loadData()
+  window.addEventListener('mouseup', handleTableMouseUp)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('mouseup', handleTableMouseUp)
 })
 </script>
+
+<style scoped>
+.custom-table-scrollbar::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.custom-table-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 9999px;
+}
+.custom-table-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.custom-table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+</style>
