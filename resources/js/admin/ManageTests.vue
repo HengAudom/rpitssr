@@ -31,8 +31,15 @@
     <!-- ══════════════════════════════════════════════════════════════ -->
     <!-- VIEW 1: EXAM LIBRARY (TEST BANK)                               -->
     <!-- ══════════════════════════════════════════════════════════════ -->
-    <div v-if="!isBuilderMode" class="space-y-6">
-      <!-- Filter Toolbar -->
+    <div v-if="!isBuilderMode">
+      <!-- Loading Skeleton -->
+      <div v-if="initialLoading" class="space-y-6">
+        <Skeleton height="110px" customClass="rounded-2xl" />
+        <Skeleton height="400px" customClass="rounded-2xl" />
+      </div>
+
+      <div v-else class="space-y-6">
+        <!-- Filter Toolbar -->
       <Card padding="sm" class="shadow-soft-sm">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="w-full sm:w-72">
@@ -336,6 +343,7 @@
           />
         </div>
       </Card>
+      </div>
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════ -->
@@ -1398,6 +1406,7 @@ import Pagination from '../components/ui/Pagination.vue'
 import EmptyState from '../components/ui/EmptyState.vue'
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import CustomDropdown from '../components/CustomDropdown.vue'
+import Skeleton from '../components/ui/Skeleton.vue'
 import { useLang } from '../utils/useLang'
 import { renderMath } from '../utils/mathRender'
 import { useToast } from '../composables/useToast'

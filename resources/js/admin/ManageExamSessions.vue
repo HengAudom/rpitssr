@@ -10,8 +10,13 @@
       </p>
     </div>
 
+    <!-- Skeletons when initial loading -->
+    <div v-if="initialLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+      <Skeleton v-for="n in 3" :key="n" height="380px" customClass="rounded-3xl" />
+    </div>
+
     <!-- ── 3 CARDS LAYOUT ────────────────────────────────────────────────── -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
       <!-- ── CARD 1: EXAM SHIFTS (វេនប្រឡង) ────────────────────────────── -->
       <div class="bg-white rounded-3xl p-6 shadow-soft-sm border border-slate-100 flex flex-col space-y-4">
         <!-- Card Header -->
@@ -411,6 +416,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
+import Skeleton from '../components/ui/Skeleton.vue'
 import { useLang } from '../utils/useLang'
 import { useToast } from '../composables/useToast'
 import { useRealtimeSync, notifyRealtimeChange } from '../composables/useRealtimeSync'
@@ -418,6 +424,9 @@ import { fastCache } from '../stores/fastCache'
 
 const { lang } = useLang()
 const { success: toastSuccess, error: toastError } = useToast()
+
+// ─── INITIAL LOADING STATE ───────────────────────────────────────────────────
+const initialLoading = ref(!fastCache.get('exam_sessions')?.length)
 
 // ─── 1. SHIFTS STATE ──────────────────────────────────────────────────────────
 const sessions = ref(fastCache.get('exam_sessions') || [])
@@ -810,8 +819,11 @@ useRealtimeSync(() => {
   }
 }, 4000)
 
-onMounted(() => {
-  loadSessions()
-  loadDaysYears()
+onMounted(async () => {
+  try {
+    await Promise.all([loadSessions(), loadDaysYears()])
+  } finally {
+    initialLoading.value = false
+  }
 })
 </script>

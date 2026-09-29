@@ -29,8 +29,19 @@
       </div>
     </div>
 
-    <!-- Stat KPI Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <!-- Skeleton Shimmer Loading -->
+    <div v-if="initialLoading" class="space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Skeleton v-for="n in 3" :key="n" height="100px" customClass="rounded-2xl" />
+      </div>
+      <Skeleton height="60px" customClass="rounded-2xl" />
+      <Skeleton height="400px" customClass="rounded-2xl" />
+    </div>
+
+    <!-- Loaded Content -->
+    <template v-else>
+      <!-- Stat KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <Card padding="normal" class="shadow-soft-sm relative overflow-hidden">
         <div class="flex items-center justify-between">
           <div>
@@ -267,6 +278,7 @@
         :totalItems="filteredAdminsList.length"
       />
     </Card>
+    </template>
 
     <!-- ── Add Administrator Modal ─────────────────────────────────── -->
     <Modal
@@ -380,6 +392,7 @@ import Modal from '../components/ui/Modal.vue'
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import EmptyState from '../components/ui/EmptyState.vue'
 import Pagination from '../components/ui/Pagination.vue'
+import Skeleton from '../components/ui/Skeleton.vue'
 import { useLang } from '../utils/useLang'
 import { useToast } from '../composables/useToast'
 import { usePermissions } from '../composables/usePermissions'

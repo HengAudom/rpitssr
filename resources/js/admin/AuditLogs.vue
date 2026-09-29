@@ -44,8 +44,16 @@
       </div>
     </div>
 
-    <!-- Filter Toolbar -->
-    <Card padding="sm" class="shadow-soft-sm">
+    <!-- Skeleton Shimmer Loading -->
+    <div v-if="initialLoading" class="space-y-6">
+      <Skeleton height="60px" customClass="rounded-2xl" />
+      <Skeleton height="400px" customClass="rounded-2xl" />
+    </div>
+
+    <!-- Loaded Content -->
+    <template v-else>
+      <!-- Filter Toolbar -->
+      <Card padding="sm" class="shadow-soft-sm">
       <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 flex-1 max-w-2xl">
           <CustomDropdown
@@ -236,6 +244,7 @@
         :totalItems="filteredLogs.length"
       />
     </Card>
+    </template>
 
     <!-- ── Delete All Confirm Dialog ───────────────────────────────────── -->
     <ConfirmDialog
@@ -264,6 +273,7 @@ import Pagination from '../components/ui/Pagination.vue'
 import EmptyState from '../components/ui/EmptyState.vue'
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import CustomDropdown from '../components/CustomDropdown.vue'
+import Skeleton from '../components/ui/Skeleton.vue'
 import { useLang } from '../utils/useLang'
 import { useToast } from '../composables/useToast'
 import { usePermissions } from '../composables/usePermissions'

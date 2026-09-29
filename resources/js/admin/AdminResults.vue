@@ -25,8 +25,19 @@
       </div>
     </div>
 
-    <!-- Summary KPI Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <!-- Skeleton Shimmer Loading -->
+    <div v-if="initialLoading" class="space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Skeleton v-for="n in 3" :key="n" height="110px" customClass="rounded-2xl" />
+      </div>
+      <Skeleton height="60px" customClass="rounded-2xl" />
+      <Skeleton height="400px" customClass="rounded-2xl" />
+    </div>
+
+    <!-- Loaded Content -->
+    <template v-else>
+      <!-- Summary KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <StatCard
         :label="t.totalSubmissions"
         :value="filteredResults.length"
@@ -288,6 +299,7 @@
         :totalItems="filteredResults.length"
       />
     </Card>
+    </template>
 
     <!-- ── Delete Confirm Dialog ───────────────────────────────────── -->
     <ConfirmDialog
@@ -479,6 +491,7 @@ import EmptyState from '../components/ui/EmptyState.vue'
 import Modal from '../components/ui/Modal.vue'
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import CustomDropdown from '../components/CustomDropdown.vue'
+import Skeleton from '../components/ui/Skeleton.vue'
 import { useLang } from '../utils/useLang'
 import { useToast } from '../composables/useToast'
 import { usePermissions } from '../composables/usePermissions'

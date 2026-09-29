@@ -21,8 +21,19 @@
       </div>
     </div>
 
-    <!-- Live KPI Stats Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <!-- Skeleton Shimmer Loading -->
+    <div v-if="initialLoading" class="space-y-6">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Skeleton v-for="n in 4" :key="n" height="110px" customClass="rounded-2xl" />
+      </div>
+      <Skeleton height="60px" customClass="rounded-2xl" />
+      <Skeleton height="380px" customClass="rounded-2xl" />
+    </div>
+
+    <!-- Loaded Content -->
+    <template v-else>
+      <!-- Live KPI Stats Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       <StatCard
         :title="t.activeExaminees"
         :value="activeCount"
@@ -376,6 +387,7 @@
         </div>
       </div>
     </Card>
+    </template>
 
     <!-- Force Submit Confirm Dialog -->
     <ConfirmDialog
@@ -402,6 +414,7 @@ import SearchInput from '../components/ui/SearchInput.vue'
 import EmptyState from '../components/ui/EmptyState.vue'
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import CustomDropdown from '../components/CustomDropdown.vue'
+import Skeleton from '../components/ui/Skeleton.vue'
 import { useLang } from '../utils/useLang'
 import { useToast } from '../composables/useToast'
 import { useRealtimeSync } from '../composables/useRealtimeSync'
@@ -415,6 +428,7 @@ const activeCount = ref(0)
 const sessions = ref([])
 const tests = ref([])
 const loading = ref(false)
+const initialLoading = ref(true)
 
 const searchQuery = ref('')
 const selectedSessionId = ref('')
@@ -545,6 +559,7 @@ const fetchData = async (isBg = false) => {
     if (!isBg) toastError(lang.value === 'kh' ? 'មិនអាចទាញយកទិន្នន័យបានទេ' : 'Failed to fetch live monitoring data')
   } finally {
     if (!isBg) loading.value = false
+    initialLoading.value = false
   }
 }
 

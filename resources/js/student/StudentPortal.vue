@@ -2,8 +2,19 @@
   <StudentLayout>
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-      <!-- ── Candidate Welcome & Exam Shift Card ───────────────────────────── -->
-      <div class="rounded-3xl bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white p-5 sm:p-8 shadow-soft-lg relative overflow-hidden">
+      <!-- Skeleton Shimmer Loading -->
+      <div v-if="initialLoading" class="space-y-6">
+        <Skeleton height="140px" customClass="rounded-3xl" />
+        <Skeleton height="120px" customClass="rounded-3xl" />
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <Skeleton height="350px" customClass="rounded-2xl lg:col-span-7" />
+          <Skeleton height="350px" customClass="rounded-2xl lg:col-span-5" />
+        </div>
+      </div>
+
+      <div v-else class="space-y-6">
+        <!-- ── Candidate Welcome & Exam Shift Card ───────────────────────────── -->
+        <div class="rounded-3xl bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white p-5 sm:p-8 shadow-soft-lg relative overflow-hidden">
         <div class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
 
         <div class="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 sm:gap-6">
@@ -191,6 +202,7 @@
 
       </div>
 
+      </div>
     </div>
   </StudentLayout>
 </template>
@@ -204,6 +216,7 @@ import Card from '../components/ui/Card.vue'
 import Button from '../components/ui/Button.vue'
 import Input from '../components/ui/Input.vue'
 import EmptyState from '../components/ui/EmptyState.vue'
+import Skeleton from '../components/ui/Skeleton.vue'
 import { useLang } from '../utils/useLang'
 import { useToast } from '../composables/useToast'
 import { useSettings } from '../composables/useSettings'
@@ -212,6 +225,8 @@ const router = useRouter()
 const { lang } = useLang()
 const { success: toastSuccess, error: toastError } = useToast()
 const { settings, fetchSettings } = useSettings()
+
+const initialLoading = ref(true)
 
 const student = reactive({
   name: '',
@@ -415,6 +430,8 @@ const loadStudentData = async () => {
     examResults.value = resultsRes.data.results || []
   } catch (e) {
     console.error('Failed to load student data', e)
+  } finally {
+    initialLoading.value = false
   }
 }
 

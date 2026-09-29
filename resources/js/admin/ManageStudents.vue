@@ -55,8 +55,15 @@
       </div>
     </div>
 
-    <!-- Filter Toolbar Card -->
-    <Card padding="sm" class="shadow-soft-sm">
+    <!-- Skeleton Shimmer Loading -->
+    <div v-if="initialLoading" class="space-y-6">
+      <Skeleton height="60px" customClass="rounded-2xl" />
+      <Skeleton height="420px" customClass="rounded-2xl" />
+    </div>
+
+    <template v-else>
+      <!-- Filter Toolbar Card -->
+      <Card padding="sm" class="shadow-soft-sm">
       <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <!-- Filter Controls -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 flex-1 max-w-4xl">
@@ -344,6 +351,7 @@
         :totalItems="filteredStudentsList.length"
       />
     </Card>
+    </template>
 
     <!-- ── Add Student Modal ─────────────────────────────────────────── -->
     <Modal
@@ -867,6 +875,7 @@ import Modal from '../components/ui/Modal.vue'
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import Pagination from '../components/ui/Pagination.vue'
 import EmptyState from '../components/ui/EmptyState.vue'
+import Skeleton from '../components/ui/Skeleton.vue'
 import { useLang } from '../utils/useLang'
 import { useToast } from '../composables/useToast'
 import { usePermissions } from '../composables/usePermissions'

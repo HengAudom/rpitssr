@@ -103,9 +103,11 @@
     </div>
 
     <!-- ── Loading / Error / Submitting States ─────────────────────── -->
-    <div v-else-if="loading" class="flex-1 flex flex-col items-center justify-center gap-4 text-blue-600">
-      <span class="material-symbols-outlined animate-spin text-5xl">progress_activity</span>
-      <p class="font-bold text-base text-slate-700">{{ t.loadingExam }}</p>
+    <div v-else-if="loading" class="flex-1 flex items-center justify-center p-4 sm:p-8">
+      <div class="max-w-xl w-full space-y-4">
+        <Skeleton height="140px" customClass="rounded-3xl" />
+        <Skeleton height="240px" customClass="rounded-2xl" />
+      </div>
     </div>
 
     <div v-else-if="loadError" class="flex-1 flex flex-col items-center justify-center p-6 text-center">
@@ -753,6 +755,7 @@ import Modal from '../components/ui/Modal.vue'
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue'
 import Drawer from '../components/ui/Drawer.vue'
 import LangSwitcher from '../components/LangSwitcher.vue'
+import Skeleton from '../components/ui/Skeleton.vue'
 import { useLang } from '../utils/useLang'
 import { renderMath } from '../utils/mathRender'
 import { useToast } from '../composables/useToast'

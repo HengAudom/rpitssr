@@ -29,8 +29,18 @@
       </div>
     </div>
 
-    <!-- Role Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- Skeleton Shimmer Loading -->
+    <div v-if="initialLoading" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Skeleton v-for="n in 3" :key="n" height="90px" customClass="rounded-2xl" />
+      </div>
+      <Skeleton height="400px" customClass="rounded-2xl" />
+    </div>
+
+    <!-- Loaded Content -->
+    <template v-else>
+      <!-- Role Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <Card
         v-for="role in roles"
         :key="role.name"
@@ -291,6 +301,7 @@
         </div>
       </template>
     </Card>
+    </template>
   </div>
 </template>
 
@@ -300,6 +311,7 @@ import axios from 'axios'
 import Card from '../components/ui/Card.vue'
 import Button from '../components/ui/Button.vue'
 import Badge from '../components/ui/Badge.vue'
+import Skeleton from '../components/ui/Skeleton.vue'
 import { useLang } from '../utils/useLang'
 import { useToast } from '../composables/useToast'
 import { usePermissions } from '../composables/usePermissions'
@@ -312,6 +324,7 @@ const { fetchUser } = usePermissions()
 const roles = ref([])
 const permissions = ref([])
 const saving = ref(false)
+const initialLoading = ref(true)
 
 const t = computed(() => {
   if (lang.value === 'kh') {
@@ -406,6 +419,8 @@ const loadData = async () => {
     })
   } catch (e) {
     toastError(lang.value === 'kh' ? 'មិនអាចទាញយកតារាងសិទ្ធិបានទេ' : 'Failed to load roles and permissions.')
+  } finally {
+    initialLoading.value = false
   }
 }
 
