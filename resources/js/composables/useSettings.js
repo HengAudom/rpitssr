@@ -6,13 +6,13 @@ import { useLang } from '../utils/useLang'
 const defaultSettings = {
   institutionName: 'RPITSSR',
   portalTitle: 'RPITSSR',
-  portalSubtitle: 'EXAM SYSTEM',
+  portalSubtitle: 'SCHOLARSHIP',
   logoUrl: '/logo.png',
   academicYear: '2026-2027',
   timezone: 'Asia/Phnom_Penh',
   defaultLanguage: 'kh',
   sessionTimeoutMinutes: 60,
-  allowRegistration: true,
+  allowRegistration: false,
   forceStrongPassword: true,
   antiCheatPause: true,
   autosaveIntervalSeconds: 3,
@@ -36,7 +36,7 @@ const settings = reactive({ ...defaultSettings, ...cached })
 const isLoaded = ref(false)
 const isLoading = ref(false)
 
-const normalizeBoolean = (val, defaultVal = true) => {
+const normalizeBoolean = (val, defaultVal = false) => {
   if (val === undefined || val === null) return defaultVal
   if (typeof val === 'boolean') return val
   if (typeof val === 'string') {
@@ -52,7 +52,7 @@ const syncLocalSettings = (newSettings) => {
   if (!newSettings || typeof newSettings !== 'object') return
   const normalized = { ...newSettings }
   if ('allowRegistration' in normalized) {
-    normalized.allowRegistration = normalizeBoolean(normalized.allowRegistration, true)
+    normalized.allowRegistration = normalizeBoolean(normalized.allowRegistration, false)
   }
   if ('forceStrongPassword' in normalized) {
     normalized.forceStrongPassword = normalizeBoolean(normalized.forceStrongPassword, true)

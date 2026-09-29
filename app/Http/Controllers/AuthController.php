@@ -18,7 +18,8 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $settings = AdminController::getSystemSettings();
-        if (isset($settings['allowRegistration']) && !$settings['allowRegistration']) {
+        $allowReg = filter_var($settings['allowRegistration'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if (!$allowReg) {
             return response()->json([
                 'message' => 'ការចុះឈ្មោះបង្កើតគណនីដោយខ្លួនឯងត្រូវបានបិទជាបណ្ដោះអាសន្នដោយ Administrator (Self-registration is currently disabled).'
             ], 403);
@@ -52,7 +53,13 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Registration successful. Your Student ID is ' . $studentCode . '. Please sign in to take exams.',
             'studentCode' => $studentCode,
-            'student' => $student,
+            'student' => [
+                'studentCode' => $studentCode,
+                'firstName' => $student->FirstName,
+                'lastName' => $student->LastName,
+                'gender' => $student->Gender,
+                'phone' => $student->Phone,
+            ],
         ], 201);
     }
 
@@ -118,22 +125,8 @@ class AuthController extends Controller
 
         $clean = strtolower($identifier);
 
-        // Check if matches an admin username (exact or prefix for 3+ chars) in tbladmin
-        $isAdmin = Admin::whereRaw('LOWER(Username) = ?', [$clean])
-            ->orWhereRaw('LOWER(Username) LIKE ?', [$clean . '%'])
-            ->exists();
-
-        if (!$isAdmin) {
-            foreach (Admin::select('FirstName', 'LastName')->get() as $a) {
-                $f1 = strtolower(trim(($a->FirstName ?? '') . ' ' . ($a->LastName ?? '')));
-                $f2 = strtolower(trim(($a->LastName ?? '') . ' ' . ($a->FirstName ?? '')));
-                if (($f1 !== '' && (str_starts_with($f1, $clean) || $f1 === $clean)) ||
-                    ($f2 !== '' && (str_starts_with($f2, $clean) || $f2 === $clean))) {
-                    $isAdmin = true;
-                    break;
-                }
-            }
-        }
+        // Check if matches an admin username strictly (exact match only, prevents enumeration)
+        $isAdmin = Admin::whereRaw('LOWER(Username) = ?', [$clean])->exists();
 
         return response()->json([
             'status' => 'ok',
@@ -189,7 +182,7 @@ class AuthController extends Controller
                         request: $request
                     );
                     return response()->json([
-                        'message' => $lang === 'en' ? 'Invalid password.' : 'ពាក្យសម្ងាត់មិនត្រឹមត្រូវ'
+                        'message' => $lang === 'en' ? 'Invalid identifier or password.' : 'ឈ្មោះគណនី ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ'
                     ], 422);
                 }
 
@@ -229,14 +222,9 @@ class AuthController extends Controller
                 ]);
             }
 
-            // 2. Student lookup strictly by StudentCode or StudentId in tblstudent
+            // 2. Student lookup strictly by alphanumeric StudentCode in tblstudent (prevents sequential ID guessing)
             $student = Student::with(['session'])
-                ->where(function ($q) use ($identifier) {
-                    $q->whereRaw('LOWER(StudentCode) = ?', [strtolower($identifier)]);
-                    if (is_numeric($identifier)) {
-                        $q->orWhere('StudentId', (int)$identifier);
-                    }
-                })
+                ->whereRaw('LOWER(StudentCode) = ?', [strtolower($identifier)])
                 ->first();
 
             if ($student) {
@@ -244,7 +232,7 @@ class AuthController extends Controller
                 if (!empty($student->Password)) {
                     if (empty($password) || !Hash::check($password, $student->Password)) {
                         return response()->json([
-                            'message' => $lang === 'en' ? 'Invalid credentials.' : 'ឈ្មោះគណនី ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ'
+                            'message' => $lang === 'en' ? 'Invalid identifier or password.' : 'ឈ្មោះគណនី ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ'
                         ], 422);
                     }
                 } elseif (!empty($password) && trim((string)$password) !== '') {
@@ -288,7 +276,7 @@ class AuthController extends Controller
 
             // Neither admin nor student found
             return response()->json([
-                'message' => $lang === 'en' ? 'Student ID not found.' : 'រកមិនឃើញ Student ID នេះឡើយ'
+                'message' => $lang === 'en' ? 'Invalid identifier or password.' : 'ឈ្មោះគណនី ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ'
             ], 422);
 
         } catch (\Throwable $e) {
@@ -551,18 +539,12 @@ class AuthController extends Controller
         $admin = Admin::whereRaw('LOWER(Username) = ?', [strtolower($username)])->first();
         $student = $admin ? null : Student::whereRaw('LOWER(StudentCode) = ?', [strtolower($username)])->first();
 
-        if (!$admin && !$student) {
-            return response()->json(['message' => 'រកមិនឃើញឈ្មោះគណនីនេះក្នុងប្រព័ន្ធឡើយ (Account not found).'], 404);
-        }
-
         $matched = false;
-        $displayName = '';
 
         if ($student) {
             $studentPhone = preg_replace('/[^0-9]/', '', $student->Phone ?? '');
             if ($studentPhone && (str_ends_with($studentPhone, $phoneInput) || str_ends_with($phoneInput, $studentPhone))) {
                 $matched = true;
-                $displayName = trim(($student->FirstName ?? '') . ' ' . ($student->LastName ?? '')) ?: $student->StudentCode;
             }
         }
 
@@ -570,18 +552,31 @@ class AuthController extends Controller
             $adminPhone = preg_replace('/[^0-9]/', '', $admin->Phone ?? '');
             if ($adminPhone && (str_ends_with($adminPhone, $phoneInput) || str_ends_with($phoneInput, $adminPhone))) {
                 $matched = true;
-                $displayName = trim(($admin->FirstName ?? '') . ' ' . ($admin->LastName ?? '')) ?: $admin->Username;
             }
         }
 
         if (!$matched) {
-            return response()->json(['message' => 'លេខទូរស័ព្ទមិនត្រូវគ្នានឹងគណនីនេះឡើយ សូមពិនិត្យលេខទូរស័ព្ទដែលបានចុះឈ្មោះ (Phone number does not match registered profile).'], 422);
+            // Uniform response prevents user enumeration (Finding F & G)
+            return response()->json(['message' => 'ព័ត៌មានមិនត្រឹមត្រូវ សូមពិនិត្យឈ្មោះគណនី និងលេខទូរស័ព្ទម្តងទៀត (Account or phone number does not match registered profile).'], 422);
+        }
+
+        // Generate cryptographically secure single-use reset token valid for 10 minutes
+        $resetToken = bin2hex(random_bytes(32));
+        try {
+            \Illuminate\Support\Facades\Cache::store('database')->put('pw_reset_' . $resetToken, [
+                'admin_id' => $admin ? $admin->AdminId : null,
+                'student_id' => $student ? $student->StudentId : null,
+            ], 600);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Cache::put('pw_reset_' . $resetToken, [
+                'admin_id' => $admin ? $admin->AdminId : null,
+                'student_id' => $student ? $student->StudentId : null,
+            ], 600);
         }
 
         return response()->json([
             'message' => 'ការផ្ទៀងផ្ទាត់ជោគជ័យ! (Identity verified successfully)',
-            'username' => $username,
-            'displayName' => $displayName,
+            'reset_token' => $resetToken,
         ]);
     }
 
@@ -593,37 +588,62 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $data = $request->validate([
-            'username' => ['required', 'string'],
-            'phone'    => ['required', 'string'],
+            'username' => ['nullable', 'string'],
+            'phone'    => ['nullable', 'string'],
             'password' => ['required', 'string', 'min:6'],
+            'reset_token' => ['nullable', 'string'],
         ]);
 
-        $username   = trim($data['username']);
-        $phoneInput = preg_replace('/[^0-9]/', '', $data['phone']);
+        $token = $request->input('reset_token');
+        $targetUser = null;
 
-        if (!$phoneInput) {
-            return response()->json(['message' => 'សូមបញ្ចូលលេខទូរស័ព្ទឲ្យបានត្រឹមត្រូវ (Please enter a valid phone number).'], 422);
-        }
-
-        $admin = Admin::whereRaw('LOWER(Username) = ?', [strtolower($username)])->first();
-
-        if ($admin) {
-            $adminPhone = preg_replace('/[^0-9]/', '', $admin->Phone ?? '');
-            if (!$adminPhone || (!str_ends_with($adminPhone, $phoneInput) && !str_ends_with($phoneInput, $adminPhone))) {
-                return response()->json(['message' => 'លេខទូរស័ព្ទមិនត្រូវគ្នានឹងគណនីនេះឡើយ សូមពិនិត្យលេខទូរស័ព្ទដែលបានចុះឈ្មោះ (Phone number does not match registered profile).'], 422);
+        if ($token) {
+            try {
+                $cached = \Illuminate\Support\Facades\Cache::store('database')->pull('pw_reset_' . $token);
+            } catch (\Throwable $e) {
+                $cached = \Illuminate\Support\Facades\Cache::pull('pw_reset_' . $token);
             }
 
-            $admin->Password = Hash::make($data['password']);
-            $admin->save();
+            if (!$cached) {
+                return response()->json([
+                    'message' => 'Reset token ផុតកំណត់ ឬមិនត្រឹមត្រូវឡើយ សូមផ្ទៀងផ្ទាត់ម្តងទៀត (Reset token expired or invalid).'
+                ], 422);
+            }
 
-            return response()->json([
-                'message' => 'ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ! (Password changed successfully)',
-                'username' => $admin->Username,
-                'redirect' => '/login',
-            ]);
+            if (!empty($cached['admin_id'])) {
+                $targetUser = Admin::find($cached['admin_id']);
+            } elseif (!empty($cached['student_id'])) {
+                $targetUser = Student::find($cached['student_id']);
+            }
+        } else {
+            // Direct verification fallback
+            $username   = trim((string)$request->input('username'));
+            $phoneInput = preg_replace('/[^0-9]/', '', (string)$request->input('phone'));
+
+            if (!$username || !$phoneInput) {
+                return response()->json(['message' => 'ព័ត៌មានមិនត្រឹមត្រូវ (Invalid reset request).'], 422);
+            }
+
+            $admin = Admin::whereRaw('LOWER(Username) = ?', [strtolower($username)])->first();
+            if ($admin) {
+                $adminPhone = preg_replace('/[^0-9]/', '', $admin->Phone ?? '');
+                if ($adminPhone && (str_ends_with($adminPhone, $phoneInput) || str_ends_with($phoneInput, $adminPhone))) {
+                    $targetUser = $admin;
+                }
+            }
         }
 
-        return response()->json(['message' => 'ការកំណត់ពាក្យសម្ងាត់ថ្មីអាចធ្វើបានសម្រាប់ Admin តែប៉ុណ្ណោះ (Password reset is for Admin only).'], 422);
+        if (!$targetUser) {
+            return response()->json(['message' => 'ព័ត៌មានមិនត្រឹមត្រូវ (Invalid reset request).'], 422);
+        }
+
+        $targetUser->Password = Hash::make($data['password']);
+        $targetUser->save();
+
+        return response()->json([
+            'message' => 'ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ! (Password changed successfully)',
+            'redirect' => '/login',
+        ]);
     }
 
     public function forgotPassword(Request $request)
@@ -633,90 +653,77 @@ class AuthController extends Controller
     public function uploadProfileImage(Request $request)
     {
         $user = $request->user();
-        if (!$user)
+        if (!$user) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
 
         $request->validate([
-            'image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:5120'], // Increased to 5MB
+            'image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:5120'], // Max 5MB
         ]);
 
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             $extension = strtolower($file->getClientOriginalExtension());
-            $filename = time() . '_' . $user->id . '.jpg'; // Always save as jpg for consistent compression
-            $destinationPath = public_path('uploads/profiles');
-
-            if (!file_exists($destinationPath)) {
-                @mkdir($destinationPath, 0755, true);
-            }
-
             $sourcePath = $file->getRealPath();
-            $targetPath = $destinationPath . '/' . $filename;
 
-            // Load image based on extension
+            // Load image into GD memory buffer
+            $image = null;
             switch ($extension) {
                 case 'jpeg':
                 case 'jpg':
-                    $image = imagecreatefromjpeg($sourcePath);
+                    $image = @imagecreatefromjpeg($sourcePath);
                     break;
                 case 'png':
-                    $image = imagecreatefrompng($sourcePath);
-                    imagepalettetotruecolor($image); // Handle transparency
+                    $image = @imagecreatefrompng($sourcePath);
+                    if ($image) imagepalettetotruecolor($image);
                     break;
                 case 'webp':
-                    $image = imagecreatefromwebp($sourcePath);
+                    $image = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($sourcePath) : null;
                     break;
                 case 'gif':
-                    $image = imagecreatefromgif($sourcePath);
+                    $image = @imagecreatefromgif($sourcePath);
                     break;
-                default:
-                    return response()->json(['message' => 'Unsupported image format.'], 400);
             }
 
-            if (!$image) {
-                return response()->json(['message' => 'Failed to process image.'], 500);
-            }
+            if ($image) {
+                // Resize to max 600px for optimal storage and high resolution
+                $width = imagesx($image);
+                $height = imagesy($image);
+                $maxDim = 600;
 
-            // Get original dimensions
-            $width = imagesx($image);
-            $height = imagesy($image);
-            $maxDim = 800; // Resize to max 800px
+                if ($width > $maxDim || $height > $maxDim) {
+                    $ratio = $width / $height;
+                    if ($ratio > 1) {
+                        $newWidth = $maxDim;
+                        $newHeight = (int)($maxDim / $ratio);
+                    } else {
+                        $newWidth = (int)($maxDim * $ratio);
+                        $newHeight = $maxDim;
+                    }
 
-            if ($width > $maxDim || $height > $maxDim) {
-                $ratio = $width / $height;
-                if ($ratio > 1) {
-                    $newWidth = $maxDim;
-                    $newHeight = $maxDim / $ratio;
-                } else {
-                    $newWidth = $maxDim * $ratio;
-                    $newHeight = $maxDim;
+                    $newImage = imagecreatetruecolor($newWidth, $newHeight);
+                    imagecopyresampled($newImage, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+                    imagedestroy($image);
+                    $image = $newImage;
                 }
 
-                $newImage = imagecreatetruecolor($newWidth, $newHeight);
-                imagecopyresampled($newImage, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+                ob_start();
+                imagejpeg($image, null, 75);
+                $imageData = ob_get_clean();
                 imagedestroy($image);
-                $image = $newImage;
+
+                $base64Image = 'data:image/jpeg;base64,' . base64_encode($imageData);
+            } else {
+                $rawContent = file_get_contents($sourcePath);
+                $base64Image = 'data:' . ($file->getMimeType() ?: 'image/jpeg') . ';base64,' . base64_encode($rawContent);
             }
 
-            // Save as compressed JPEG (80% quality)
-            imagejpeg($image, $targetPath, 80);
-            imagedestroy($image);
-
-            // Delete old profile image if it exists and is different
-            if ($user->profile_image) {
-                $oldFileRelative = ltrim($user->profile_image, '/');
-                $oldFilePath = public_path($oldFileRelative);
-                if (file_exists($oldFilePath) && is_file($oldFilePath)) {
-                    @unlink($oldFilePath); // Silent delete
-                }
-            }
-
-            $user->ProfileImage = '/uploads/profiles/' . $filename;
+            $user->ProfileImage = $base64Image;
             $user->save();
 
             return response()->json([
                 'message' => 'Profile image uploaded and optimized.',
-                'profileImage' => $user->profile_image ?? $user->ProfileImage
+                'profileImage' => $base64Image,
             ]);
         }
 
@@ -749,15 +756,15 @@ class AuthController extends Controller
     {
         $yearStr = !empty($year) ? trim($year) : date('Y');
         for ($i = 0; $i < 100; $i++) {
-            $randomNum = str_pad((string)mt_rand(10000, 99999), 5, '0', STR_PAD_LEFT);
-            $candidateCode = 'SR' . $yearStr . $randomNum;
+            // Cryptographically secure 6-character random suffix (>16.7 million space per year)
+            $randomHex = strtoupper(bin2hex(random_bytes(3)));
+            $candidateCode = 'SR' . $yearStr . $randomHex;
             $exists = Student::where('StudentCode', $candidateCode)->exists();
             if (!$exists) {
                 return $candidateCode;
             }
         }
-        $nextId = (Student::max('StudentId') ?? 0) + 1;
-        return 'SR' . $yearStr . str_pad((string)$nextId, 5, '0', STR_PAD_LEFT);
+        return 'SR' . $yearStr . strtoupper(bin2hex(random_bytes(4)));
     }
 
     private function processUploadedPhoto($photoInput, $uploadedFile = null): ?string
@@ -766,31 +773,17 @@ class AuthController extends Controller
             return null;
         }
 
-        if (!empty($photoInput) && is_string($photoInput) && str_starts_with($photoInput, '/uploads/')) {
-            return $photoInput;
-        }
-
-        $uploadDir = public_path('uploads/profiles');
-        if (!is_dir($uploadDir)) {
-            @mkdir($uploadDir, 0755, true);
+        if (!empty($photoInput) && is_string($photoInput)) {
+            if (str_starts_with($photoInput, 'data:image/') || str_starts_with($photoInput, '/uploads/')) {
+                return $photoInput;
+            }
         }
 
         if ($uploadedFile && $uploadedFile->isValid()) {
-            $filename = time() . '_' . uniqid() . '.' . $uploadedFile->getClientOriginalExtension();
-            @$uploadedFile->move($uploadDir, $filename);
-            return '/uploads/profiles/' . $filename;
-        }
-
-        if (!empty($photoInput) && is_string($photoInput) && str_starts_with($photoInput, 'data:image/')) {
-            $parts = explode(',', $photoInput);
-            if (count($parts) === 2) {
-                $data = base64_decode($parts[1]);
-                $ext = 'jpg';
-                if (str_contains($parts[0], 'png')) $ext = 'png';
-                if (str_contains($parts[0], 'webp')) $ext = 'webp';
-                $filename = time() . '_' . uniqid() . '.' . $ext;
-                @file_put_contents($uploadDir . '/' . $filename, $data);
-                return '/uploads/profiles/' . $filename;
+            $content = @file_get_contents($uploadedFile->getRealPath());
+            if ($content !== false) {
+                $mime = $uploadedFile->getMimeType() ?: 'image/jpeg';
+                return 'data:' . $mime . ';base64,' . base64_encode($content);
             }
         }
 

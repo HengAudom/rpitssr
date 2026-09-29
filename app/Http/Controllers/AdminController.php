@@ -501,7 +501,7 @@ class AdminController extends Controller
             'timezone' => 'Asia/Phnom_Penh',
             'defaultLanguage' => 'kh',
             'sessionTimeoutMinutes' => 60,
-            'allowRegistration' => true,
+            'allowRegistration' => false,
             'forceStrongPassword' => true,
             'antiCheatPause' => true,
             'autosaveIntervalSeconds' => 3,
@@ -513,6 +513,20 @@ class AdminController extends Controller
             'serverTime' => now()->toDateTimeString()
         ];
 
+        // 1. First priority: Check database (persistent across all serverless instances)
+        try {
+            if (Schema::hasTable('tblsystemsetting')) {
+                $dbRow = DB::table('tblsystemsetting')->where('setting_key', 'system_settings')->first();
+                if ($dbRow && !empty($dbRow->setting_value)) {
+                    $savedDb = json_decode($dbRow->setting_value, true);
+                    if (is_array($savedDb)) {
+                        $defaults = array_merge($defaults, $savedDb);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        // 2. Fallback to local settings file if present
         $settingsFile = storage_path('app/settings.json');
         if (file_exists($settingsFile)) {
             $saved = json_decode(file_get_contents($settingsFile), true);
@@ -525,7 +539,7 @@ class AdminController extends Controller
             $defaults['portalTitle'] = $defaults['portalTitle'] ?? $defaults['institutionName'];
         }
 
-        $defaults['allowRegistration'] = filter_var($defaults['allowRegistration'] ?? true, FILTER_VALIDATE_BOOLEAN);
+        $defaults['allowRegistration'] = filter_var($defaults['allowRegistration'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $defaults['forceStrongPassword'] = filter_var($defaults['forceStrongPassword'] ?? true, FILTER_VALIDATE_BOOLEAN);
         $defaults['antiCheatPause'] = filter_var($defaults['antiCheatPause'] ?? true, FILTER_VALIDATE_BOOLEAN);
         $defaults['autoSubmitOnTimeout'] = filter_var($defaults['autoSubmitOnTimeout'] ?? true, FILTER_VALIDATE_BOOLEAN);
@@ -543,8 +557,25 @@ class AdminController extends Controller
         $settings = self::getSystemSettings();
         $sessions = ExamSession::where('Status', 'Active')->orderBy('ExamDate', 'asc')->orderBy('StartTime', 'asc')->get();
         return response()->json([
-            'settings' => $settings,
-            'sessions' => $sessions,
+            'settings' => [
+                'institutionName' => $settings['institutionName'] ?? 'RPITSSR',
+                'portalTitle' => $settings['portalTitle'] ?? 'RPITSSR',
+                'portalSubtitle' => $settings['portalSubtitle'] ?? 'SCHOLARSHIP',
+                'logoUrl' => $settings['logoUrl'] ?? '/logo.png',
+                'academicYear' => $settings['academicYear'] ?? '2026-2027',
+                'defaultLanguage' => $settings['defaultLanguage'] ?? 'kh',
+                'allowRegistration' => (bool)($settings['allowRegistration'] ?? false),
+                'forceStrongPassword' => (bool)($settings['forceStrongPassword'] ?? true),
+                'antiCheatPause' => (bool)($settings['antiCheatPause'] ?? true),
+                'autosaveIntervalSeconds' => (int)($settings['autosaveIntervalSeconds'] ?? 3),
+            ],
+            'sessions' => $sessions->map(fn($s) => [
+                'SessionId' => $s->SessionId,
+                'SessionName' => $s->SessionName,
+                'ExamDate' => $s->ExamDate,
+                'StartTime' => $s->StartTime,
+                'EndTime' => $s->EndTime,
+            ]),
         ]);
     }
 
@@ -591,7 +622,21 @@ class AdminController extends Controller
         }
 
         $merged = array_merge($existing, $data);
-        file_put_contents($settingsFile, json_encode($merged, JSON_PRETTY_PRINT));
+
+        // 1. Save to Database (persists across all Vercel serverless containers!)
+        try {
+            if (Schema::hasTable('tblsystemsetting')) {
+                DB::table('tblsystemsetting')->updateOrInsert(
+                    ['setting_key' => 'system_settings'],
+                    ['setting_value' => json_encode($merged, JSON_UNESCAPED_UNICODE)]
+                );
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to save settings to DB: ' . $e->getMessage());
+        }
+
+        // 2. Also save to local storage file as fallback
+        @file_put_contents($settingsFile, json_encode($merged, JSON_PRETTY_PRINT));
 
         return response()->json(['message' => 'System settings updated successfully!', 'settings' => self::getSystemSettings()]);
     }
@@ -1858,31 +1903,17 @@ class AdminController extends Controller
             return null;
         }
 
-        if (!empty($photoInput) && is_string($photoInput) && str_starts_with($photoInput, '/uploads/')) {
-            return $photoInput;
-        }
-
-        $uploadDir = public_path('uploads/profiles');
-        if (!is_dir($uploadDir)) {
-            @mkdir($uploadDir, 0755, true);
+        if (!empty($photoInput) && is_string($photoInput)) {
+            if (str_starts_with($photoInput, 'data:image/') || str_starts_with($photoInput, '/uploads/')) {
+                return $photoInput;
+            }
         }
 
         if ($uploadedFile && $uploadedFile->isValid()) {
-            $filename = time() . '_' . uniqid() . '.' . $uploadedFile->getClientOriginalExtension();
-            @$uploadedFile->move($uploadDir, $filename);
-            return '/uploads/profiles/' . $filename;
-        }
-
-        if (!empty($photoInput) && is_string($photoInput) && str_starts_with($photoInput, 'data:image/')) {
-            $parts = explode(',', $photoInput);
-            if (count($parts) === 2) {
-                $data = base64_decode($parts[1]);
-                $ext = 'jpg';
-                if (str_contains($parts[0], 'png')) $ext = 'png';
-                if (str_contains($parts[0], 'webp')) $ext = 'webp';
-                $filename = time() . '_' . uniqid() . '.' . $ext;
-                @file_put_contents($uploadDir . '/' . $filename, $data);
-                return '/uploads/profiles/' . $filename;
+            $content = @file_get_contents($uploadedFile->getRealPath());
+            if ($content !== false) {
+                $mime = $uploadedFile->getMimeType() ?: 'image/jpeg';
+                return 'data:' . $mime . ';base64,' . base64_encode($content);
             }
         }
 

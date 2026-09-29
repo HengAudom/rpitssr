@@ -21,7 +21,7 @@ class ValidateApiOrigin
             $referer = $request->headers->get('Referer');
 
             // Enforce on requests carrying authenticated sessions
-            if ($request->user() || $request->hasCookie(config('session.cookie', 'online_exam_session'))) {
+            if ($request->user() || $request->hasCookie('scholarship_session') || $request->hasCookie('scholarship-session') || $request->hasCookie(config('session.cookie', 'scholarship_session'))) {
                 $appHost = strtolower($request->getHost());
 
                 if ($origin) {

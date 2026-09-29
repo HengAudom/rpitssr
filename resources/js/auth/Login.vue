@@ -181,7 +181,7 @@ const onUsernameInput = () => {
 }
 
 onMounted(() => {
-  fetchSettings()
+  fetchSettings(true)
   const saved = localStorage.getItem('saved_login_username')
   if (saved) {
     form.username = saved
