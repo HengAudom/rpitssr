@@ -29,7 +29,7 @@
           :label="isAdminMode ? (lang === 'kh' ? 'ឈ្មោះគណនី' : 'Username') : (lang === 'kh' ? 'លេខសម្គាល់សិស្ស' : 'Student ID')"
           :icon="isAdminMode ? 'person' : 'badge'"
           required
-          :placeholder="isAdminMode ? (lang === 'kh' ? 'បញ្ចូលឈ្មោះគណនី' : 'Enter admin username') : (lang === 'kh' ? 'ឧ. SRXXXXXXXXXX ឬលេខសម្គាល់' : 'e.g. SRXXXXXXXXXX or ID number')"
+          :placeholder="isAdminMode ? (lang === 'kh' ? 'បញ្ចូលឈ្មោះគណនី' : 'Enter admin username') : (lang === 'kh' ? 'ឧ. SRXXXXXXXXXX' : 'e.g. SRXXXXXXXXXX')"
           @input="onUsernameInput"
         />
 
