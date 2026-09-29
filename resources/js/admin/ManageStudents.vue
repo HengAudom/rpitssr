@@ -510,8 +510,8 @@
       v-model="showExcelModal"
       :title="excelAction === 'export' ? (lang === 'kh' ? 'នាំចេញរបាយការណ៍បញ្ជីបេក្ខជន (Excel)' : 'Export Candidates Directory (Excel)') : (lang === 'kh' ? 'នាំចូលបញ្ជីបេក្ខជនជាឯកសារ Excel' : 'Import Candidates from Excel')"
       :subtitle="excelAction === 'export' ? (lang === 'kh' ? 'ជ្រើសរើសតម្រងឆ្នាំសិក្សា វេនប្រឡង ឬស្ថានភាពសម្រាប់ទាញយក' : 'Filter by academic year, shift, or status before exporting') : (lang === 'kh' ? 'ទាញយកគម្រូ បំពេញទិន្នន័យ និងបញ្ចូលឯកសារ Excel (.xlsx)' : 'Download template, fill data, and upload Excel (.xlsx)')"
-      max-width="2xl"
-      :overflow-visible="true"
+      max-width="3xl"
+      :overflow-visible="excelAction === 'export'"
     >
       <div class="space-y-4">
         <!-- Operation Selector (Export vs Import) -->
@@ -687,42 +687,76 @@
           <!-- Preview parsed data -->
           <div v-if="parsedStudents.length > 0" class="space-y-2">
             <div class="flex items-center justify-between text-xs font-bold text-slate-700">
-              <span>{{ lang === 'kh' ? 'ទិន្នន័យបានពិនិត្យ' : 'Preview Data' }} ({{ parsedStudents.length }} {{ lang === 'kh' ? 'នាក់' : 'candidates' }})</span>
-              <button type="button" @click="clearImport" class="text-red-600 hover:underline font-semibold">{{ lang === 'kh' ? 'សម្អាត' : 'Clear' }}</button>
+              <span class="inline-flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-base text-emerald-600">table_rows</span>
+                <span>{{ lang === 'kh' ? 'ទិន្នន័យបានពិនិត្យ' : 'Preview Data' }} ({{ parsedStudents.length }} {{ lang === 'kh' ? 'នាក់' : 'candidates' }})</span>
+              </span>
+              <button
+                type="button"
+                @click="clearImport"
+                class="text-red-600 hover:text-red-700 hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                <span>{{ lang === 'kh' ? 'សម្អាត' : 'Clear' }}</span>
+              </button>
             </div>
-            <div class="max-h-60 overflow-y-auto border border-slate-200 rounded-xl">
-              <table class="min-w-full text-xs text-left divide-y divide-slate-100">
-                <thead class="bg-slate-50 sticky top-0 font-bold text-slate-600">
-                  <tr>
-                    <th class="px-3 py-2">#</th>
-                    <th class="px-3 py-2">Student ID</th>
-                    <th class="px-3 py-2">{{ lang === 'kh' ? 'នាមខ្លួន' : 'First Name' }}</th>
-                    <th class="px-3 py-2">{{ lang === 'kh' ? 'គោត្តនាម' : 'Last Name' }}</th>
-                    <th class="px-3 py-2">{{ lang === 'kh' ? 'ភេទ' : 'Gender' }}</th>
-                    <th class="px-3 py-2">{{ lang === 'kh' ? 'ទូរស័ព្ទ' : 'Phone' }}</th>
-                    <th class="px-3 py-2">{{ lang === 'kh' ? 'វេនប្រឡង' : 'Exam Shift' }}</th>
-                    <th class="px-3 py-2">{{ lang === 'kh' ? 'ថ្ងៃប្រឡង' : 'Exam Day' }}</th>
-                    <th class="px-3 py-2">{{ lang === 'kh' ? 'ឆ្នាំសិក្សា' : 'Academic Year' }}</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 bg-white">
-                  <tr v-for="(s, idx) in parsedStudents.slice(0, 100)" :key="idx" class="hover:bg-slate-50">
-                    <td class="px-3 py-2 text-slate-400 font-mono">{{ idx + 1 }}</td>
-                    <td class="px-3 py-2 font-mono font-bold text-blue-600">{{ s.studentCode || '-' }}</td>
-                    <td class="px-3 py-2 font-medium">{{ s.firstName }}</td>
-                    <td class="px-3 py-2 font-medium">{{ s.lastName }}</td>
-                    <td class="px-3 py-2">{{ s.gender }}</td>
-                    <td class="px-3 py-2 font-mono text-slate-500">{{ s.phone || '-' }}</td>
-                    <td class="px-3 py-2 text-slate-600">{{ s.sessionName || '-' }}</td>
-                    <td class="px-3 py-2 text-slate-600">{{ s.examDay || '-' }}</td>
-                    <td class="px-3 py-2 text-slate-600">{{ s.academicYear || '-' }}</td>
-                  </tr>
-                </tbody>
-              </table>
+
+            <!-- Scrollable Table Container (Vertical scroll up to 280px + Horizontal scroll) -->
+            <div class="relative border border-slate-200/90 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div class="max-h-64 sm:max-h-72 overflow-y-auto overflow-x-auto divide-y divide-slate-100">
+                <table class="min-w-[680px] w-full text-xs text-left">
+                  <thead class="bg-slate-100/95 backdrop-blur-xs sticky top-0 z-10 font-bold text-slate-700 border-b border-slate-200 shadow-2xs">
+                    <tr>
+                      <th class="px-3.5 py-2.5 text-center w-12">#</th>
+                      <th class="px-3.5 py-2.5">Student ID</th>
+                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'នាមខ្លួន' : 'First Name' }}</th>
+                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'គោត្តនាម' : 'Last Name' }}</th>
+                      <th class="px-3.5 py-2.5 text-center">{{ lang === 'kh' ? 'ភេទ' : 'Gender' }}</th>
+                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'ទូរស័ព្ទ' : 'Phone' }}</th>
+                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'វេនប្រឡង' : 'Exam Shift' }}</th>
+                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'ថ្ងៃប្រឡង' : 'Exam Day' }}</th>
+                      <th class="px-3.5 py-2.5">{{ lang === 'kh' ? 'ឆ្នាំសិក្សា' : 'Academic Year' }}</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 bg-white">
+                    <tr
+                      v-for="(s, idx) in parsedStudents"
+                      :key="idx"
+                      class="hover:bg-slate-50/80 transition-colors"
+                    >
+                      <td class="px-3.5 py-2 text-slate-400 font-mono text-center">{{ idx + 1 }}</td>
+                      <td class="px-3.5 py-2 font-mono font-bold text-blue-600">{{ s.studentCode || '-' }}</td>
+                      <td class="px-3.5 py-2 font-medium text-slate-900">{{ s.firstName }}</td>
+                      <td class="px-3.5 py-2 font-medium text-slate-900">{{ s.lastName }}</td>
+                      <td class="px-3.5 py-2 text-center">
+                        <span
+                          v-if="s.gender"
+                          :class="[
+                            'px-2 py-0.5 rounded-md text-[10px] font-bold',
+                            s.gender === 'Female' || s.gender === 'ស្រី'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200/60'
+                              : 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                          ]"
+                        >
+                          {{ s.gender }}
+                        </span>
+                        <span v-else class="text-slate-400">-</span>
+                      </td>
+                      <td class="px-3.5 py-2 font-mono text-slate-600">{{ s.phone || '-' }}</td>
+                      <td class="px-3.5 py-2 text-slate-600">{{ s.sessionName || '-' }}</td>
+                      <td class="px-3.5 py-2 text-slate-600">{{ s.examDay || '-' }}</td>
+                      <td class="px-3.5 py-2 text-slate-600 font-mono">{{ s.academicYear || '-' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <p v-if="parsedStudents.length > 100" class="text-[11px] text-slate-400 text-center">
-              {{ lang === 'kh' ? 'បង្ហាញតែ ១០០ ជួរដំបូង' : 'Showing first 100 rows preview' }}
-            </p>
+
+            <!-- Footer count & summary -->
+            <div class="flex items-center justify-between text-[11px] text-slate-500 px-1 pt-0.5">
+              <span>{{ lang === 'kh' ? 'បញ្ជីទិន្នន័យបេក្ខជនទាំងអស់ដែលបាន Upload' : 'Scroll to view all uploaded candidates' }}</span>
+              <span class="font-bold text-slate-700 font-mono">{{ parsedStudents.length }} {{ lang === 'kh' ? 'នាក់សរុប' : 'candidates total' }}</span>
+            </div>
           </div>
         </div>
       </div>
