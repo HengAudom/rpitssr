@@ -292,9 +292,9 @@ const handleLogin = async () => {
           : (lang.value === 'kh' ? 'រកមិនឃើញ Student ID នេះឡើយ' : 'Student ID not found.')
       }
     } else {
-      errorMessage.value = lang.value === 'kh'
+      errorMessage.value = rawMsg || (lang.value === 'kh'
         ? 'មានបញ្ហាតភ្ជាប់មូលដ្ឋានទិន្នន័យ សូមព្យាយាមម្តងទៀត'
-        : 'Database connection error. Please try again.'
+        : 'Database connection error. Please try again.')
     }
   } finally {
     isSubmitting.value = false

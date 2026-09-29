@@ -27,6 +27,14 @@ if (is_dir($sourceStorageApp)) {
             @copy($src, $dst);
         }
     }
-}
+// Fix Vercel Serverless SCRIPT_NAME / baseUrl issue:
+// Vercel serverless executes from /api/index.php.
+// Without overriding SCRIPT_NAME to /index.php, Symfony Request detects '/api' as the application baseUrl,
+// which strips '/api' from all incoming API routes (causing 405 Method Not Allowed) and prepends '/api' to asset URLs.
+$_SERVER['SCRIPT_NAME'] = '/index.php';
+$_SERVER['SCRIPT_FILENAME'] = __DIR__ . '/../public/index.php';
+$_SERVER['PHP_SELF'] = '/index.php';
+unset($_SERVER['PATH_INFO']);
+unset($_SERVER['ORIG_SCRIPT_NAME']);
 
 require __DIR__ . '/../public/index.php';
