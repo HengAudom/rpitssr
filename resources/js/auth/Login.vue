@@ -1,26 +1,6 @@
 <template>
   <PublicLayout>
     <Card padding="none" class="p-5 sm:p-8 shadow-soft-lg border border-slate-200/80 rounded-2xl sm:rounded-3xl">
-      <!-- Role Switcher Tab -->
-      <div class="flex p-1 bg-slate-100 rounded-xl mb-4 sm:mb-5 border border-slate-200/60">
-        <button
-          type="button"
-          @click="selectMode(false)"
-          :class="[!isAdminMode ? 'bg-white text-blue-600 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-800 font-medium', 'flex-1 py-2 px-3 text-xs sm:text-sm rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer']"
-        >
-          <span class="material-symbols-outlined text-base">badge</span>
-          {{ lang === 'kh' ? 'សិស្សប្រឡង' : 'Candidate' }}
-        </button>
-        <button
-          type="button"
-          @click="selectMode(true)"
-          :class="[isAdminMode ? 'bg-white text-blue-600 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-800 font-medium', 'flex-1 py-2 px-3 text-xs sm:text-sm rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer']"
-        >
-          <span class="material-symbols-outlined text-base">admin_panel_settings</span>
-          {{ lang === 'kh' ? 'អ្នកគ្រប់គ្រង' : 'Admin' }}
-        </button>
-      </div>
-
       <!-- Form Header -->
       <div class="mb-4 sm:mb-6 space-y-1 sm:space-y-1.5">
         <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
@@ -158,16 +138,6 @@ const errorMessage = ref('')
 const isAdminMode = ref(false)
 const passwordInputRef = ref(null)
 
-const selectMode = (admin) => {
-  isAdminMode.value = admin
-  errorMessage.value = ''
-  if (admin) {
-    nextTick(() => {
-      passwordInputRef.value?.focus?.()
-    })
-  }
-}
-
 const identifierCache = new Map()
 let checkDebounceTimer = null
 let currentRequestId = 0
@@ -180,8 +150,12 @@ const onUsernameInput = () => {
     return
   }
 
-  // Instant response from in-memory cache
   const lowerVal = val.toLowerCase()
+  if (lowerVal.includes('admin') || lowerVal.includes('super') || lowerVal.includes('dom')) {
+    isAdminMode.value = true
+  }
+
+  // Instant response from in-memory cache
   if (identifierCache.has(lowerVal)) {
     isAdminMode.value = identifierCache.get(lowerVal)
   }
