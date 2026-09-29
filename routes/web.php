@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 // ─── Public Endpoints (Essential for Guest Sign In & Registration) ────────────
 Route::get('/api/public-settings', [AdminController::class, 'publicSettings']);
 
-Route::middleware(['throttle:30,1'])->group(function () {
+Route::middleware(['throttle:10,1'])->group(function () {
     Route::post('/api/check-identifier', [AuthController::class, 'checkIdentifier']);
 });
 
@@ -18,7 +18,7 @@ Route::middleware(['throttle:login'])->group(function () {
     Route::post('/api/login', [AuthController::class, 'login']);
 });
 
-Route::middleware(['throttle:15,1'])->group(function () {
+Route::middleware(['throttle:10,1'])->group(function () {
     Route::post('/api/register', [AuthController::class, 'register']);
 });
 

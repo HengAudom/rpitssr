@@ -1,6 +1,26 @@
 <template>
   <PublicLayout>
     <Card padding="none" class="p-5 sm:p-8 shadow-soft-lg border border-slate-200/80 rounded-2xl sm:rounded-3xl">
+      <!-- Role Switcher Tab -->
+      <div class="flex p-1 bg-slate-100 rounded-xl mb-4 sm:mb-5 border border-slate-200/60">
+        <button
+          type="button"
+          @click="selectMode(false)"
+          :class="[!isAdminMode ? 'bg-white text-blue-600 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-800 font-medium', 'flex-1 py-2 px-3 text-xs sm:text-sm rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer']"
+        >
+          <span class="material-symbols-outlined text-base">badge</span>
+          {{ lang === 'kh' ? 'សិស្សប្រឡង' : 'Candidate' }}
+        </button>
+        <button
+          type="button"
+          @click="selectMode(true)"
+          :class="[isAdminMode ? 'bg-white text-blue-600 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-800 font-medium', 'flex-1 py-2 px-3 text-xs sm:text-sm rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer']"
+        >
+          <span class="material-symbols-outlined text-base">admin_panel_settings</span>
+          {{ lang === 'kh' ? 'អ្នកគ្រប់គ្រង' : 'Admin' }}
+        </button>
+      </div>
+
       <!-- Form Header -->
       <div class="mb-4 sm:mb-6 space-y-1 sm:space-y-1.5">
         <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
@@ -29,11 +49,11 @@
           :label="isAdminMode ? (lang === 'kh' ? 'ឈ្មោះគណនី' : 'Username') : (lang === 'kh' ? 'លេខសម្គាល់សិស្ស' : 'Student ID')"
           :icon="isAdminMode ? 'person' : 'badge'"
           required
-          :placeholder="isAdminMode ? (lang === 'kh' ? 'បញ្ចូលឈ្មោះគណនី' : 'Enter admin username') : (lang === 'kh' ? 'ឧ. SRXXXXXXXXXX' : 'e.g. SRXXXXXXXXXX')"
+          :placeholder="isAdminMode ? (lang === 'kh' ? 'បញ្ចូលឈ្មោះគណនី' : 'Enter admin username') : (lang === 'kh' ? 'ឧ. SRXXXXXXXXXX ឬលេខសម្គាល់' : 'e.g. SRXXXXXXXXXX or ID number')"
           @input="onUsernameInput"
         />
 
-        <!-- Password (Auto-revealed smoothly when username matches Admin / Super Admin) -->
+        <!-- Password (Auto-revealed smoothly when in admin mode) -->
         <Transition
           enter-active-class="transition-all duration-200 ease-out"
           enter-from-class="opacity-0 -translate-y-2 max-h-0 overflow-hidden"
@@ -51,6 +71,14 @@
               required
               @input="errorMessage = ''"
             />
+            <div class="flex justify-end pt-0.5">
+              <RouterLink
+                to="/forgot-password"
+                class="text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                {{ lang === 'kh' ? 'ភ្លេចពាក្យសម្ងាត់?' : 'Forgot password?' }}
+              </RouterLink>
+            </div>
           </div>
         </Transition>
 
@@ -129,6 +157,16 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const isAdminMode = ref(false)
 const passwordInputRef = ref(null)
+
+const selectMode = (admin) => {
+  isAdminMode.value = admin
+  errorMessage.value = ''
+  if (admin) {
+    nextTick(() => {
+      passwordInputRef.value?.focus?.()
+    })
+  }
+}
 
 const identifierCache = new Map()
 let checkDebounceTimer = null
@@ -217,7 +255,7 @@ const handleLogin = async () => {
     const res = await axios.post('/api/login', {
       identifier: identifier,
       username: identifier,
-      password: isAdminMode.value ? form.password : '',
+      password: (isAdminMode.value || form.password) ? form.password : '',
       lang: lang.value
     })
 

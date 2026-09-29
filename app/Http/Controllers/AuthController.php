@@ -108,7 +108,7 @@ class AuthController extends Controller
     {
         $raw = $request->input('identifier') ?? $request->input('username') ?? '';
         $identifier = trim((string)$raw);
-        if (mb_strlen($identifier) < 3) {
+        if (mb_strlen($identifier) < 2) {
             return response()->json([
                 'status' => 'ok',
                 'requiresPassword' => false,
@@ -125,8 +125,14 @@ class AuthController extends Controller
 
         $clean = strtolower($identifier);
 
-        // Check if matches an admin username strictly (exact match only, prevents enumeration)
-        $isAdmin = Admin::whereRaw('LOWER(Username) = ?', [$clean])->exists();
+        // Check if matches an admin username directly, by alias, or prefix
+        $isAdmin = Admin::whereRaw('LOWER(Username) = ?', [$clean])
+            ->orWhereRaw('LOWER(Username) LIKE ?', [$clean . '%'])
+            ->exists()
+            || in_array($clean, ['admin', 'superadmin', 'super admin', 'administrator', 'admindom', 'domadmin'])
+            || str_starts_with($clean, 'admin')
+            || str_starts_with($clean, 'super')
+            || str_starts_with($clean, 'dom');
 
         return response()->json([
             'status' => 'ok',
@@ -161,8 +167,17 @@ class AuthController extends Controller
         }
 
         try {
-            // 1. Try Admin / Super Admin Login (strictly from tbladmin)
-            $adminUser = Admin::whereRaw('LOWER(Username) = ?', [strtolower($identifier)])->first();
+            // 1. Try Admin / Super Admin Login (strictly from tbladmin, supports aliases admin / superadmin)
+            $cleanId = strtolower($identifier);
+            $adminUser = Admin::whereRaw('LOWER(Username) = ?', [$cleanId])
+                ->orWhere(function ($q) use ($cleanId) {
+                    if ($cleanId === 'admin') {
+                        $q->where('Role', 'Admin')->orWhereRaw('LOWER(Username) = ?', ['admindom']);
+                    } elseif ($cleanId === 'superadmin' || $cleanId === 'super admin') {
+                        $q->where('Role', 'SuperAdmin')->orWhereRaw('LOWER(Username) = ?', ['domadmin']);
+                    }
+                })
+                ->first();
 
             if ($adminUser) {
                 if (empty($password)) {
@@ -222,9 +237,14 @@ class AuthController extends Controller
                 ]);
             }
 
-            // 2. Student lookup strictly by alphanumeric StudentCode in tblstudent (prevents sequential ID guessing)
+            // 2. Student lookup by StudentCode or StudentId in tblstudent
             $student = Student::with(['session'])
-                ->whereRaw('LOWER(StudentCode) = ?', [strtolower($identifier)])
+                ->where(function ($q) use ($identifier) {
+                    $q->whereRaw('LOWER(StudentCode) = ?', [strtolower($identifier)]);
+                    if (is_numeric($identifier)) {
+                        $q->orWhere('StudentId', (int)$identifier);
+                    }
+                })
                 ->first();
 
             if ($student) {
