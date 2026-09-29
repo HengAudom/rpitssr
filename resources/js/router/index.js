@@ -2,7 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../auth/Login.vue'
 import Register from '../auth/Register.vue'
 import ForgotPassword from '../auth/ForgotPassword.vue'
-import ResetPassword from '../auth/ResetPassword.vue'
+import axios from 'axios'
+import { usePermissions } from '../composables/usePermissions'
 
 const routes = [
   {
@@ -26,22 +27,55 @@ const routes = [
   },
   {
     path: '/reset-password',
-    name: 'ResetPassword',
-    component: ResetPassword
+    redirect: '/forgot-password'
   },
 
-  // ── Admin ─────────────────────────────────────────────────────────
+  // ── Admin & Super Admin ───────────────────────────────────────────
   {
     path: '/admin',
     component: () => import('../admin/AdminLayout.vue'),
+    meta: { requiresAuth: true },
     children: [
       { path: '',             redirect: 'dashboard' },
-      { path: 'dashboard',   name: 'AdminDashboard',      component: () => import('../admin/AdminDashboard.vue') },
-      { path: 'students',    name: 'ManageStudents',       component: () => import('../admin/ManageStudents.vue') },
-      { path: 'tests',       name: 'ManageTests',          component: () => import('../admin/ManageTests.vue') },
-      { path: 'skills-batches', name: 'ManageSkillsBatches', component: () => import('../admin/ManageSkillsBatches.vue') },
-      { path: 'results',     name: 'AdminResults',         component: () => import('../admin/AdminResults.vue') },
+      { path: 'dashboard',    name: 'AdminDashboard',      component: () => import('../admin/AdminDashboard.vue') },
+      { path: 'students',     name: 'ManageStudents',       component: () => import('../admin/ManageStudents.vue') },
+      { path: 'tests',        name: 'ManageTests',          component: () => import('../admin/ManageTests.vue') },
+      { path: 'exam-sessions', name: 'ManageExamSessions', component: () => import('../admin/ManageExamSessions.vue') },
+      { path: 'skills-groups', redirect: 'exam-sessions' },
+      { path: 'live-monitor',  name: 'LiveExamMonitor',    component: () => import('../admin/LiveExamMonitor.vue') },
+      { path: 'results',      name: 'AdminResults',         component: () => import('../admin/AdminResults.vue') },
       { path: 'results/:submissionId', name: 'AdminResultDetail', component: () => import('../admin/AdminResultDetail.vue') },
+
+      // Super Admin Dedicated Routes
+      {
+        path: 'admins',
+        name: 'ManageAdmins',
+        meta: { requiresSuperAdmin: true },
+        component: () => import('../admin/ManageAdmins.vue')
+      },
+      {
+        path: 'roles-permissions',
+        name: 'RolesPermissions',
+        meta: { requiresSuperAdmin: true },
+        component: () => import('../admin/RolesPermissions.vue')
+      },
+      {
+        path: 'audit-logs',
+        name: 'AuditLogs',
+        meta: { module: 'Audit Logs', action: 'view' },
+        component: () => import('../admin/AuditLogs.vue')
+      },
+      {
+        path: 'system-settings',
+        name: 'SystemSettings',
+        meta: { module: 'System Settings', action: 'view' },
+        component: () => import('../admin/SystemSettings.vue')
+      },
+      {
+        path: 'access-restricted',
+        name: 'AccessRestricted',
+        component: () => import('../admin/AccessRestricted.vue')
+      }
     ]
   },
 
@@ -49,17 +83,24 @@ const routes = [
   {
     path: '/student',
     name: 'Student',
+    meta: { requiresAuth: true },
     component: () => import('../student/StudentPortal.vue')
   },
   {
     path: '/student/exam/:testId',
     name: 'Exam',
+    meta: { requiresAuth: true },
     component: () => import('../student/ExamRoom.vue')
   },
   {
+    path: '/student/submission-success',
+    name: 'student-submission-success',
+    meta: { requiresAuth: true },
+    component: () => import('../student/SubmissionSuccess.vue')
+  },
+  {
     path: '/student/results/:submissionId',
-    name: 'ExamResults',
-    component: () => import('../student/ExamResults.vue')
+    redirect: to => `/admin/results/${to.params.submissionId}`
   },
 
   // ── Catch-all ─────────────────────────────────────────────────────
@@ -73,5 +114,87 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+// Cached user in memory
+let cachedUser = null
+
+// ══ Global Navigation Guard (Instant 0ms synchronous transition) ════
+router.beforeEach(async (to, _from, next) => {
+  if (!to.matched.some(r => r.meta?.requiresAuth)) {
+    return next()
+  }
+
+  if (!localStorage.getItem('isAuthenticated')) {
+    return next({ name: 'Login', replace: true })
+  }
+
+  let role = cachedUser?.role || localStorage.getItem('userRole') || ''
+
+  // Only perform network request if role is completely unknown
+  if (!role && !cachedUser) {
+    try {
+      const res = await axios.get('/api/profile')
+      cachedUser = res.data.user
+      role = cachedUser?.role || 'Student'
+      localStorage.setItem('userRole', role)
+    } catch {
+      localStorage.removeItem('isAuthenticated')
+      localStorage.removeItem('userRole')
+      return next({ name: 'Login', replace: true })
+    }
+  }
+
+  const isAdminRole = ['Admin', 'Super Admin', 'SuperAdmin'].includes(role)
+  const isSuperAdminRole = ['Super Admin', 'SuperAdmin'].includes(role)
+
+  // If an Admin/SuperAdmin visits /student, redirect to /admin/dashboard
+  if (to.path === '/student' && isAdminRole) {
+    return next({ name: 'AdminDashboard', replace: true })
+  }
+
+  // If a Student visits /admin, redirect to /student
+  if (to.path.startsWith('/admin') && !isAdminRole) {
+    return next({ name: 'Student', replace: true })
+  }
+
+  // Check SuperAdmin routes
+  if (to.matched.some(r => r.meta?.requiresSuperAdmin)) {
+    if (isSuperAdminRole) {
+      return next()
+    } else {
+      return next({ name: 'AccessRestricted' })
+    }
+  }
+
+  // Check module permission routes
+  const moduleRoute = to.matched.find(r => r.meta?.module)
+  if (moduleRoute && !isSuperAdminRole) {
+    const { can, userPermissions, fetchUser } = usePermissions()
+    if (!userPermissions.value.length) {
+      await fetchUser(true)
+    }
+    if (!can(moduleRoute.meta.module, moduleRoute.meta.action || 'view')) {
+      return next({ name: 'AccessRestricted' })
+    }
+  }
+
+  next()
+})
+
+// ══ Global Axios Interceptor ═════════════════════════════════════════
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem('isAuthenticated')
+        localStorage.removeItem('userRole')
+        cachedUser = null
+        router.replace({ name: 'Login' })
+      }
+    }
+    return Promise.reject(error)
+  }
+)
 
 export default router

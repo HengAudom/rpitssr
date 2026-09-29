@@ -3,6 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
+@header_remove('X-Powered-By');
+@ini_set('expose_php', 'off');
+
 define('LARAVEL_START', microtime(true));
 
 // Determine if the application is in maintenance mode...

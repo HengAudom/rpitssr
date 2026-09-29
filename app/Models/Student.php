@@ -2,40 +2,73 @@
 
 namespace App\Models;
 
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\Notifiable;
 
-class Student extends Model
+class Student extends Authenticatable
 {
-    use HasFactory;
+    use HasFactory, Notifiable;
 
-    protected $table = 'tblStudent';
+    protected $table = 'tblstudent';
     protected $primaryKey = 'StudentId';
 
     protected $fillable = [
-        'UserId',
-        'SkillId',
-        'BatchId',
+        'StudentCode',
+        'SessionId',
+        'ExamDay',
+        'AcademicYear',
         'FirstName',
         'LastName',
         'Gender',
-        'StudyShift',
         'Phone',
+        'ProfileImage',
     ];
 
-    public function user()
+    public function getAuthIdentifier()
     {
-        return $this->belongsTo(User::class, 'UserId', 'id');
+        return 'student:' . $this->StudentId;
     }
 
-    public function skill()
+    public function getAuthIdentifierName()
     {
-        return $this->belongsTo(Skill::class, 'SkillId', 'SkillId');
+        return 'StudentId';
     }
 
-    public function batch()
+    public function getIdAttribute()
     {
-        return $this->belongsTo(Batch::class, 'BatchId', 'BatchId');
+        return $this->StudentId;
+    }
+
+    public function getNameAttribute()
+    {
+        $full = trim(($this->FirstName ?? '') . ' ' . ($this->LastName ?? ''));
+        return $full ?: ($this->StudentCode ?? ('Candidate #' . $this->StudentId));
+    }
+
+    public function getRoleAttribute()
+    {
+        return 'Student';
+    }
+
+    public function getStatusAttribute()
+    {
+        return 'Active';
+    }
+
+    public function getProfileImageAttribute()
+    {
+        return $this->attributes['ProfileImage'] ?? null;
+    }
+
+    public function setProfileImageAttribute($value)
+    {
+        $this->attributes['ProfileImage'] = $value;
+    }
+
+    public function session()
+    {
+        return $this->belongsTo(ExamSession::class, 'SessionId', 'SessionId');
     }
 
     public function submissions()

@@ -6,39 +6,38 @@ use Illuminate\Database\Eloquent\Model;
 
 class Test extends Model
 {
-    protected $table = 'tblTest';
+    protected $table = 'tbltest';
     protected $primaryKey = 'TestId';
 
     protected $fillable = [
-        'SkillId',
+        'SessionId',
         'CreatedByUserId',
         'TestName',
         'DurationMinutes',
         'TotalMarks',
+        'PassScore',
+        'RandomizeQuestions',
+        'ExamDay',
+        'AcademicYear',
         'ScheduledAt',
         'FinishedAt',
         'Status',
-        'BatchId',
     ];
 
     protected $casts = [
         'ScheduledAt' => 'datetime',
-        'FinishedAt'  => 'datetime',
+        'FinishedAt' => 'datetime',
+        'RandomizeQuestions' => 'boolean',
     ];
 
-    public function skill()
+    public function session()
     {
-        return $this->belongsTo(Skill::class, 'SkillId', 'SkillId');
-    }
-
-    public function batch()
-    {
-        return $this->belongsTo(Batch::class, 'BatchId', 'BatchId');
+        return $this->belongsTo(ExamSession::class, 'SessionId', 'SessionId');
     }
 
     public function createdBy()
     {
-        return $this->belongsTo(User::class, 'CreatedByUserId', 'id');
+        return $this->belongsTo(Admin::class, 'CreatedByUserId', 'AdminId');
     }
 
     public function questions()
