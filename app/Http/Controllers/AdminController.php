@@ -496,7 +496,7 @@ class AdminController extends Controller
         $defaults = [
             'institutionName' => 'RPITSSR',
             'portalTitle' => 'RPITSSR',
-            'portalSubtitle' => 'EXAM SYSTEM',
+            'portalSubtitle' => 'SCHOLARSHIP',
             'academicYear' => '2026-2027',
             'timezone' => 'Asia/Phnom_Penh',
             'defaultLanguage' => 'kh',

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ \App\Http\Controllers\AdminController::getSystemSettings()['institutionName'] ?? 'Online Exam System' }}</title>
+    <title>{{ \App\Http\Controllers\AdminController::getSystemSettings()['institutionName'] ?? 'Scholarship' }}</title>
 
     <!-- Preload Local Material Symbols WOFF2 font for 0ms icon render -->
     <link rel="preload" href="{{ asset('fonts/material-symbols-outlined.woff2') }}" as="font" type="font/woff2" crossorigin>
@@ -22,7 +22,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="OnlineExam">
+    <meta name="apple-mobile-web-app-title" content="Scholarship">
     <link rel="apple-touch-icon" href="{{ asset('logo.png') }}?v=3">
 
     <script>

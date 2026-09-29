@@ -22,7 +22,7 @@
             Modern EdTech System
           </div>
           <h1 class="text-3xl xl:text-4xl font-extrabold tracking-tight text-white leading-tight">
-            {{ lang === 'kh' ? 'ប្រព័ន្ធគ្រប់គ្រងការប្រឡងអនឡាញ' : 'Next-Generation Online Examination System' }}
+            {{ lang === 'kh' ? 'ប្រព័ន្ធគ្រប់គ្រងការប្រឡងអាហារូបករណ៍' : 'Scholarship Examination System' }}
           </h1>
           <p class="text-slate-400 text-sm leading-relaxed">
             {{ lang === 'kh' ? 'ប្រព័ន្ធរៀបចំការប្រឡង វាយតម្លៃលទ្ធផលសិស្ស និងគ្រប់គ្រងទិន្នន័យដោយសុវត្ថិភាព និងប្រសិទ្ធភាពខ្ពស់។' : 'A robust, calm, and distraction-free workspace for assessments, student management, and real-time score analytics.' }}
@@ -54,7 +54,7 @@
 
       <!-- Footer Info -->
       <div class="relative z-10 flex items-center justify-between text-xs text-slate-500">
-        <p>© 2026 Online Exam System</p>
+        <p>© 2026 RPITSSR Scholarship System</p>
         <div class="flex items-center gap-1">
           <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
           <span>System Operational</span>

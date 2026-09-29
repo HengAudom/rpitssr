@@ -1,12 +1,12 @@
 {
-  "name": "Online Exam System",
-  "short_name": "OnlineExam",
+  "name": "RPITSSR Scholarship System",
+  "short_name": "Scholarship",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f2027",
   "theme_color": "#00288e",
   "orientation": "any",
-  "description": "Online Exam & Student Management Portal",
+  "description": "RPITSSR Scholarship & Student Portal",
   "icons": [
     {
       "src": "/pwa-192.png",
