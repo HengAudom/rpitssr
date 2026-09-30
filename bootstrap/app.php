@@ -73,8 +73,12 @@ $app = Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*') || $request->expectsJson()) {
                 $msg = $e->getMessage();
                 if ($e instanceof \PDOException || $e instanceof \Illuminate\Database\QueryException || str_contains($msg, 'SQLSTATE') || str_contains($msg, 'actively refused') || str_contains($msg, 'Connection refused') || str_contains($msg, '2002')) {
+                    $lang = $request->header('X-Language') ?? $request->input('lang') ?? 'kh';
+                    $message = ($lang === 'en')
+                        ? 'Unable to connect to the database (Please check MySQL Server).'
+                        : 'មិនអាចភ្ជាប់ទៅកាន់ Database បានទេ (សូមពិនិត្យមើល MySQL Server)។';
                     return response()->json([
-                        'message' => 'មិនអាចភ្ជាប់ទៅកាន់ Database បានទេ (សូមពិនិត្យមើល MySQL Server)។',
+                        'message' => $message,
                         'error' => 'Database connection error'
                     ], 503);
                 }

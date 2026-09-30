@@ -276,9 +276,15 @@ const handleLogin = async () => {
           : (lang.value === 'kh' ? 'រកមិនឃើញ Student ID នេះឡើយ' : 'Student ID not found.')
       }
     } else {
-      errorMessage.value = rawMsg || (lang.value === 'kh'
-        ? 'មានបញ្ហាតភ្ជាប់មូលដ្ឋានទិន្នន័យ សូមព្យាយាមម្តងទៀត'
-        : 'Database connection error. Please try again.')
+      if (rawMsg.includes('Database') || rawMsg.includes('MySQL') || rawMsg.includes('មូលដ្ឋានទិន្នន័យ') || err.response?.status === 503 || err.response?.status === 500) {
+        errorMessage.value = lang.value === 'kh'
+          ? 'មិនអាចភ្ជាប់ទៅកាន់ Database បានទេ (សូមពិនិត្យមើល MySQL Server)។'
+          : 'Unable to connect to the database (Please check MySQL Server).'
+      } else {
+        errorMessage.value = (lang.value === 'en' && /[\u1780-\u17FF]/.test(rawMsg))
+          ? 'Server connection error. Please try again.'
+          : (rawMsg || (lang.value === 'kh' ? 'មានបញ្ហាតភ្ជាប់មូលដ្ឋានទិន្នន័យ សូមព្យាយាមម្តងទៀត' : 'Database connection error. Please try again.'))
+      }
     }
   } finally {
     isSubmitting.value = false
