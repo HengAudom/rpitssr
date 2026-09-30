@@ -319,99 +319,103 @@
       v-model="showExportModal"
       :title="t.exportTitle"
       :subtitle="t.exportDesc"
-      max-width="lg"
+      max-width="2xl"
       :overflow-visible="true"
     >
-      <div class="space-y-4">
-        <!-- Format Selector Buttons -->
-        <div class="space-y-1.5">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">
-            {{ lang === 'kh' ? 'ទម្រង់ឯកសារនាំចេញ' : 'Export File Format' }}
-          </label>
-          <div class="grid grid-cols-2 gap-3 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/60">
-            <button
-              type="button"
-              @click="exportFormat = 'excel'"
-              :class="[
-                'flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-sm transition-all cursor-pointer',
-                exportFormat === 'excel'
-                  ? 'bg-white text-emerald-700 shadow-sm border border-emerald-200 ring-2 ring-emerald-500/20'
-                  : 'text-slate-600 hover:text-slate-900'
-              ]"
-            >
-              <span class="material-symbols-outlined text-base text-emerald-600">table_view</span>
-              <span>Excel (.xlsx)</span>
-            </button>
-            <button
-              type="button"
-              @click="exportFormat = 'pdf'"
-              :class="[
-                'flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-sm transition-all cursor-pointer',
-                exportFormat === 'pdf'
-                  ? 'bg-white text-red-700 shadow-sm border border-red-200 ring-2 ring-red-500/20'
-                  : 'text-slate-600 hover:text-slate-900'
-              ]"
-            >
-              <span class="material-symbols-outlined text-base text-red-600">picture_as_pdf</span>
-              <span>PDF (.pdf)</span>
-            </button>
-          </div>
+      <div class="space-y-3.5">
+        <!-- 1. Format Selector (Segmented Tabs) -->
+        <div class="flex items-center justify-between gap-2.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70">
+          <button
+            type="button"
+            @click="exportFormat = 'excel'"
+            :class="[
+              'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer',
+              exportFormat === 'excel'
+                ? 'bg-white text-emerald-700 shadow-sm border border-emerald-200 ring-2 ring-emerald-500/20'
+                : 'text-slate-600 hover:text-slate-900'
+            ]"
+          >
+            <span class="material-symbols-outlined text-lg text-emerald-600">table_view</span>
+            <span>Excel (.xlsx)</span>
+            <span v-if="exportFormat === 'excel'" class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold ml-1">
+              {{ lang === 'kh' ? 'បានជ្រើស' : 'Selected' }}
+            </span>
+          </button>
+          <button
+            type="button"
+            @click="exportFormat = 'pdf'"
+            :class="[
+              'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer',
+              exportFormat === 'pdf'
+                ? 'bg-white text-rose-700 shadow-sm border border-rose-200 ring-2 ring-rose-500/20'
+                : 'text-slate-600 hover:text-slate-900'
+            ]"
+          >
+            <span class="material-symbols-outlined text-lg text-rose-600">picture_as_pdf</span>
+            <span>PDF (.pdf)</span>
+            <span v-if="exportFormat === 'pdf'" class="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold ml-1">
+              {{ lang === 'kh' ? 'បានជ្រើស' : 'Selected' }}
+            </span>
+          </button>
         </div>
 
-        <!-- Academic Year Selector (Prominent) -->
-        <div class="space-y-1.5 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 p-4 rounded-2xl border border-blue-100">
-          <div class="flex items-center justify-between mb-1">
-            <label class="text-xs font-bold uppercase tracking-wider text-blue-950 flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-base text-blue-600">calendar_month</span>
-              <span>{{ lang === 'kh' ? 'ជ្រើសរើសឆ្នាំសិក្សាដែលចង់ទាញយក' : 'Select Academic Year to Export' }}</span>
-            </label>
+        <!-- 2. Filters Group (3 Columns: Academic Year, Shift, Test) -->
+        <div class="bg-slate-50/90 rounded-2xl p-3 border border-slate-200/80 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-base text-blue-600">filter_alt</span>
+              <span>{{ lang === 'kh' ? 'តម្រងទិន្នន័យនាំចេញ' : 'Export Data Filters' }}</span>
+            </span>
             <span v-if="exportYear" class="text-[11px] font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded-md border border-blue-200 shadow-2xs">
               {{ exportYear }}
             </span>
           </div>
-          <CustomDropdown
-            v-model="exportYear"
-            :options="yearOptions"
-            labelKey="label"
-            valueKey="value"
-            :placeholder="t.selectYear"
-          />
-          <p class="text-[11px] text-blue-600/80 mt-1">
-            {{ lang === 'kh' ? 'ជ្រើសរើសឆ្នាំសិក្សាជាក់លាក់មួយ ឬជ្រើស "ឆ្នាំសិក្សាទាំងអស់" ដើម្បីទាញយកទិន្នន័យទាំងអស់' : 'Choose a specific academic year or select "All Academic Years" to export all results.' }}
-          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div class="space-y-1">
+              <label class="block text-[11px] font-bold text-slate-600">
+                {{ lang === 'kh' ? 'ឆ្នាំសិក្សា' : 'Academic Year' }}
+              </label>
+              <CustomDropdown
+                v-model="exportYear"
+                :options="yearOptions"
+                labelKey="label"
+                valueKey="value"
+                :placeholder="t.selectYear"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <label class="block text-[11px] font-bold text-slate-600">
+                {{ lang === 'kh' ? 'វេនប្រឡង' : 'Exam Shift' }}
+              </label>
+              <CustomDropdown
+                v-model="exportSession"
+                :options="[{ label: t.selectSession, value: '' }, ...sessionOptions]"
+                labelKey="label"
+                valueKey="value"
+                :placeholder="t.selectSession"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <label class="block text-[11px] font-bold text-slate-600">
+                {{ lang === 'kh' ? 'វិញ្ញាសា' : 'Exam Test' }}
+              </label>
+              <CustomDropdown
+                v-model="exportTest"
+                :options="[{ TestName: t.selectTest, TestId: '' }, ...tests]"
+                labelKey="TestName"
+                valueKey="TestId"
+                :placeholder="t.selectTest"
+              />
+            </div>
+          </div>
         </div>
 
-        <!-- Session & Exam Filters -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div class="space-y-1.5">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">
-              {{ lang === 'kh' ? 'វេនប្រឡង' : 'Exam Shift' }}
-            </label>
-            <CustomDropdown
-              v-model="exportSession"
-              :options="[{ label: t.selectSession, value: '' }, ...sessionOptions]"
-              labelKey="label"
-              valueKey="value"
-              :placeholder="t.selectSession"
-            />
-          </div>
-          <div class="space-y-1.5">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">
-              {{ lang === 'kh' ? 'វិញ្ញាសាប្រឡង' : 'Exam Test' }}
-            </label>
-            <CustomDropdown
-              v-model="exportTest"
-              :options="[{ TestName: t.selectTest, TestId: '' }, ...tests]"
-              labelKey="TestName"
-              valueKey="TestId"
-              :placeholder="t.selectTest"
-            />
-          </div>
-        </div>
-
-        <!-- Report View Mode Toggle (Student Consolidated vs Detailed) -->
+        <!-- 3. Report View Mode (Student Consolidated vs Detailed) -->
         <div class="space-y-1.5">
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
             {{ lang === 'kh' ? 'ទម្រង់របាយការណ៍នាំចេញ' : 'Report Layout' }}
           </label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -419,9 +423,9 @@
               type="button"
               @click="exportViewMode = 'student'"
               :class="[
-                'p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5',
+                'p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5 relative',
                 exportViewMode === 'student'
-                  ? 'bg-blue-50/80 border-blue-300 ring-2 ring-blue-500/20 shadow-2xs'
+                  ? 'bg-blue-50/80 border-blue-400 ring-2 ring-blue-500/20 shadow-2xs'
                   : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600'
               ]"
             >
@@ -431,23 +435,31 @@
               ]">
                 <span class="material-symbols-outlined text-base">group</span>
               </div>
-              <div class="min-w-0">
-                <div :class="['text-xs font-bold', exportViewMode === 'student' ? 'text-blue-950' : 'text-slate-800']">
-                  {{ lang === 'kh' ? 'សរុបតាមបេក្ខជន (១ជួរក្នុង១មុខវិជ្ជា)' : 'Grouped by Candidate (1 row per subject)' }}
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5">
+                  <span :class="['text-xs font-bold', exportViewMode === 'student' ? 'text-blue-950' : 'text-slate-800']">
+                    {{ lang === 'kh' ? 'សរុបតាមបេក្ខជន' : 'Consolidated by Candidate' }}
+                  </span>
+                  <span class="text-[9.5px] px-1.5 py-0.5 rounded font-bold bg-blue-100 text-blue-700">
+                    {{ lang === 'kh' ? 'ណែនាំ' : 'Recommended' }}
+                  </span>
                 </div>
-                <div class="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                  {{ lang === 'kh' ? 'បំបែកជួរដេកតាមមុខវិជ្ជានីមួយៗដែលបេក្ខជនបានប្រឡង (ឧ. ប្រឡង ២ មុខវិជ្ជា បង្ហាញ ២ ជួរដេក)' : 'Generates a row for each subject taken by the candidate (e.g. 2 subjects = 2 rows).' }}
-                </div>
+                <p class="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                  {{ lang === 'kh' ? 'រួមបញ្ចូលគ្រប់មុខវិជ្ជា គណនាមធ្យមភាគ និងលទ្ធផលរួម (ជាប់/ធ្លាក់)' : 'Aggregates all subjects per candidate with average score & overall pass/fail.' }}
+                </p>
               </div>
+              <span v-if="exportViewMode === 'student'" class="material-symbols-outlined text-blue-600 text-base shrink-0 mt-0.5">
+                check_circle
+              </span>
             </button>
 
             <button
               type="button"
               @click="exportViewMode = 'detail'"
               :class="[
-                'p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5',
+                'p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5 relative',
                 exportViewMode === 'detail'
-                  ? 'bg-blue-50/80 border-blue-300 ring-2 ring-blue-500/20 shadow-2xs'
+                  ? 'bg-blue-50/80 border-blue-400 ring-2 ring-blue-500/20 shadow-2xs'
                   : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600'
               ]"
             >
@@ -455,127 +467,128 @@
                 'w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5',
                 exportViewMode === 'detail' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'
               ]">
-                <span class="material-symbols-outlined text-base">description</span>
+                <span class="material-symbols-outlined text-base">list_alt</span>
               </div>
-              <div class="min-w-0">
+              <div class="min-w-0 flex-1">
                 <div :class="['text-xs font-bold', exportViewMode === 'detail' ? 'text-blue-950' : 'text-slate-800']">
-                  {{ lang === 'kh' ? 'លម្អិតតាមវិញ្ញាសានីមួយៗ' : 'Detailed Submissions' }}
+                  {{ lang === 'kh' ? 'លម្អិតតាមកំណត់ត្រាប្រឡង' : 'Detailed Submissions' }}
                 </div>
-                <div class="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                <p class="text-[11px] text-slate-500 mt-0.5 leading-snug">
                   {{ lang === 'kh' ? 'បង្ហាញមួយជួរសម្រាប់វិញ្ញាសានីមួយៗដែលបានប្រឡង' : 'Shows each exam submission row separately.' }}
-                </div>
+                </p>
               </div>
+              <span v-if="exportViewMode === 'detail'" class="material-symbols-outlined text-blue-600 text-base shrink-0 mt-0.5">
+                check_circle
+              </span>
             </button>
           </div>
         </div>
 
-        <!-- Overall Result Evaluation Criteria (Divisor & Pass Score) -->
-        <div v-if="exportViewMode === 'student'" class="space-y-2.5 bg-blue-50/70 p-3.5 rounded-2xl border border-blue-200/80">
+        <!-- 4. Overall Result Evaluation Criteria (Divisor & Pass Score) -->
+        <div v-if="exportViewMode === 'student'" class="space-y-2 bg-gradient-to-br from-indigo-50/70 via-blue-50/60 to-sky-50/70 p-3 rounded-2xl border border-indigo-200/80 shadow-2xs">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-lg text-blue-700">calculate</span>
-              <label class="text-xs font-bold uppercase tracking-wider text-blue-950">
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-base text-indigo-700">functions</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-indigo-950">
                 {{ lang === 'kh' ? 'លក្ខខណ្ឌគណនាមធ្យមភាគ និងលទ្ធផលរួម' : 'Average & Overall Result Evaluation Criteria' }}
-              </label>
+              </span>
             </div>
-            <span class="text-[10px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded-md border border-blue-200 shadow-2xs">
-              {{ lang === 'kh' ? 'របាយការណ៍រួម' : 'Summary Evaluation' }}
+            <span class="text-[10px] font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-full border border-indigo-200 shadow-2xs">
+              {{ lang === 'kh' ? 'រូបមន្តស្វ័យប្រវត្តិ' : 'Auto Evaluated' }}
             </span>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-slate-700">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div class="flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-indigo-200 shadow-2xs">
+              <label class="text-xs font-bold text-slate-700">
                 {{ lang === 'kh' ? 'ចំនួនវិញ្ញាសាកំណត់ (ចែកមធ្យមភាគ)' : 'Expected Subjects Count (Divisor)' }}
               </label>
-              <input
-                v-model.number="exportRequiredSubjects"
-                type="number"
-                min="1"
-                class="w-full px-3 py-2 bg-white rounded-xl border border-blue-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-2xs"
-                :placeholder="lang === 'kh' ? 'ឧ. ៣' : 'e.g. 3'"
-              />
-              <p class="text-[10px] text-slate-500 leading-tight">
-                {{ lang === 'kh' ? 'បូកពិន្ទុវិញ្ញាសាទាំងអស់ រួចចែកនឹងចំនួននេះ ដើម្បីរកមធ្យមភាគ' : 'Sum of scores is divided by this number to get the average' }}
-              </p>
+              <div class="flex items-center gap-1">
+                <input
+                  v-model.number="exportRequiredSubjects"
+                  type="number"
+                  min="1"
+                  class="w-16 text-center py-1 bg-indigo-50/50 rounded-lg border border-indigo-300 text-xs font-extrabold text-indigo-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  placeholder="3"
+                />
+                <span class="text-[11px] text-slate-500 font-medium">{{ lang === 'kh' ? 'មុខ' : 'tests' }}</span>
+              </div>
             </div>
 
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-slate-700">
-                {{ lang === 'kh' ? 'ពិន្ទុមធ្យមភាគជាប់ (Passing Score)' : 'Passing Average Score' }}
+            <div class="flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-indigo-200 shadow-2xs">
+              <label class="text-xs font-bold text-slate-700">
+                {{ lang === 'kh' ? 'ពិន្ទុមធ្យមភាគជាប់ (Pass Score)' : 'Passing Average Score' }}
               </label>
-              <input
-                v-model.number="exportPassAverageScore"
-                type="number"
-                min="0"
-                class="w-full px-3 py-2 bg-white rounded-xl border border-blue-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-2xs"
-                :placeholder="lang === 'kh' ? 'ឧ. ៥០' : 'e.g. 50'"
-              />
-              <p class="text-[10px] text-slate-500 leading-tight">
-                {{ lang === 'kh' ? 'មធ្យមភាគ ≥ ចំនួននេះ ជាប់ បើតិចជាង ធ្លាក់' : 'Average >= this score is Pass, otherwise Fail' }}
-              </p>
+              <div class="flex items-center gap-1">
+                <input
+                  v-model.number="exportPassAverageScore"
+                  type="number"
+                  min="0"
+                  class="w-16 text-center py-1 bg-indigo-50/50 rounded-lg border border-indigo-300 text-xs font-extrabold text-indigo-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  placeholder="50"
+                />
+                <span class="text-[11px] text-slate-500 font-medium">{{ lang === 'kh' ? 'ពិន្ទុ' : 'pts' }}</span>
+              </div>
             </div>
           </div>
 
           <!-- Formula Help Banner -->
-          <div class="p-2.5 rounded-xl bg-white/90 border border-blue-200/70 text-[11px] text-slate-700 flex items-center justify-between flex-wrap gap-2">
-            <span>
-              <strong class="text-blue-900">{{ lang === 'kh' ? 'រូបមន្តគណនា៖' : 'Formula:' }}</strong>
-              {{ lang === 'kh' ? `មធ្យមភាគ = (ពិន្ទុសរុប / ${exportRequiredSubjects || 1})` : `Average = (Total Score / ${exportRequiredSubjects || 1})` }}
-            </span>
-            <span class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+          <div class="flex items-center justify-between text-[11px] px-2.5 py-1.5 rounded-xl bg-white/95 border border-indigo-200/70 flex-wrap gap-1.5">
+            <div class="text-indigo-950 font-medium flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs text-indigo-600">lightbulb</span>
+              <span>
+                <strong>{{ lang === 'kh' ? 'រូបមន្ត៖' : 'Formula:' }}</strong>
+                {{ lang === 'kh' ? `មធ្យមភាគ = (ពិន្ទុសរុប ÷ ${exportRequiredSubjects || 1})` : `Average = (Total Score ÷ ${exportRequiredSubjects || 1})` }}
+              </span>
+            </div>
+            <span class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 text-[10.5px]">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              {{ lang === 'kh' ? `ជាប់កាលណា មធ្យមភាគ ≥ ${exportPassAverageScore ?? 50}` : `Pass if Average >= ${exportPassAverageScore ?? 50}` }}
+              {{ lang === 'kh' ? `ជាប់កាលណា មធ្យមភាគ ≥ ${exportPassAverageScore ?? 50}` : `Pass if Average ≥ ${exportPassAverageScore ?? 50}` }}
             </span>
           </div>
         </div>
 
-        <!-- Preview Count Banner -->
+        <!-- 5. Preview Count Banner -->
         <div
           v-if="exportFilteredResults.length > 0"
-          class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between"
+          class="px-3.5 py-2.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between"
         >
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-base shadow-sm shrink-0">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-sm shadow-2xs shrink-0">
               {{ exportViewMode === 'student' ? exportGroupedStudents.length : exportFilteredResults.length }}
             </div>
-            <div>
-              <div class="text-xs font-bold text-emerald-950">
-                {{ exportViewMode === 'student' ? (lang === 'kh' ? 'បេក្ខជនត្រៀមទាញយក' : 'Candidates Ready for Export') : t.exportReady }}
-              </div>
-              <div class="text-[11px] text-emerald-700 mt-0.5 flex flex-wrap items-center gap-x-2">
-                <span>
-                  {{ lang === 'kh' ? 'ឆ្នាំសិក្សា:' : 'Year:' }}
-                  <span class="font-bold font-mono">{{ exportYear || (lang === 'kh' ? 'គ្រប់ឆ្នាំទាំងអស់' : 'All') }}</span>
-                </span>
-                <span>•</span>
-                <span>
-                  {{ lang === 'kh' ? 'វេន:' : 'Shift:' }}
-                  <span class="font-bold">{{ exportSessionName }}</span>
-                </span>
-              </div>
+            <div class="text-xs">
+              <span class="font-bold text-emerald-950">
+                {{ exportViewMode === 'student' ? (lang === 'kh' ? 'បេក្ខជនត្រៀមទាញយក៖' : 'Candidates to Export:') : (lang === 'kh' ? 'កំណត់ត្រាត្រៀមទាញយក៖' : 'Records to Export:') }}
+              </span>
+              <span class="font-bold text-emerald-800 ml-1">
+                {{ exportViewMode === 'student' ? `${exportGroupedStudents.length} នាក់` : `${exportFilteredResults.length} កំណត់ត្រា` }}
+              </span>
+              <span v-if="exportViewMode === 'student'" class="text-[11px] text-emerald-700 ml-1">
+                ({{ exportFilteredResults.length }} {{ lang === 'kh' ? 'វិញ្ញាសា' : 'tests' }})
+              </span>
             </div>
           </div>
-          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white text-emerald-800 font-bold text-xs border border-emerald-200 shadow-2xs">
-            <span class="material-symbols-outlined text-xs text-emerald-600">check_circle</span>
-            <span v-if="exportViewMode === 'student'">
-              {{ exportGroupedStudents.length }} {{ lang === 'kh' ? 'បេក្ខជន' : 'candidates' }} ({{ exportFilteredResults.length }} {{ lang === 'kh' ? 'វិញ្ញាសា' : 'tests' }})
+
+          <div class="flex items-center gap-1.5 text-[11px] text-emerald-800 font-semibold">
+            <span class="px-2 py-0.5 rounded-md bg-white border border-emerald-200 shadow-2xs">
+              {{ exportYear || (lang === 'kh' ? 'គ្រប់ឆ្នាំទាំងអស់' : 'All Years') }}
             </span>
-            <span v-else>
-              {{ exportFilteredResults.length }} {{ lang === 'kh' ? 'កំណត់ត្រា' : 'records' }}
+            <span v-if="exportSessionName && exportSessionName !== 'វេនប្រឡងទាំងអស់' && exportSessionName !== 'All Exam Shifts'" class="px-2 py-0.5 rounded-md bg-white border border-emerald-200 shadow-2xs truncate max-w-[130px]">
+              {{ exportSessionName }}
             </span>
-          </span>
+          </div>
         </div>
         <div
           v-else
-          class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex items-center gap-2.5 text-amber-800 text-xs"
+          class="p-3 rounded-2xl bg-amber-50 border border-amber-200 flex items-center gap-2.5 text-amber-800 text-xs"
         >
-          <span class="material-symbols-outlined text-amber-600 text-lg shrink-0">warning</span>
+          <span class="material-symbols-outlined text-amber-600 text-base shrink-0">warning</span>
           <span v-if="!results.length">
-            {{ lang === 'kh' ? 'មិនទាន់មានទិន្នន័យការប្រឡងណាមួយក្នុងប្រព័ន្ធនៅឡើយទេ (មិនទាន់មានបេក្ខជនណាបានប្រឡង)' : 'No exam submission records in the system yet (no candidates have completed an exam).' }}
+            {{ lang === 'kh' ? 'មិនទាន់មានទិន្នន័យការប្រឡងណាមួយក្នុងប្រព័ន្ធនៅឡើយទេ' : 'No exam submission records in the system yet.' }}
           </span>
           <span v-else>
-            {{ lang === 'kh' ? 'មិនមានទិន្នន័យសម្រាប់ឆ្នាំ ឬលក្ខខណ្ឌដែលបានជ្រើសរើសនេះទេ' : 'No submission records match the selected year and criteria.' }}
+            {{ lang === 'kh' ? 'មិនមានទិន្នន័យសម្រាប់លក្ខខណ្ឌដែលបានជ្រើសរើសនេះទេ' : 'No submission records match the selected criteria.' }}
           </span>
         </div>
       </div>
@@ -600,7 +613,7 @@
           icon="print"
           :disabled="exportFilteredResults.length === 0"
           @click="executeExportPDF"
-          class="bg-red-600 hover:bg-red-700 text-white border-none shadow-sm cursor-pointer"
+          class="bg-rose-600 hover:bg-rose-700 text-white border-none shadow-sm cursor-pointer"
         >
           {{ t.downloadPdf }}
         </Button>
