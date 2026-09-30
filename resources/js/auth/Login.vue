@@ -1,28 +1,6 @@
 <template>
   <PublicLayout>
     <Card padding="none" class="p-5 sm:p-8 shadow-soft-lg border border-slate-200/80 rounded-2xl sm:rounded-3xl">
-      <!-- Portal Mode Tabs (Candidate vs Admin) -->
-      <div class="flex p-1 bg-slate-100 rounded-xl sm:rounded-2xl mb-4 sm:mb-6 border border-slate-200/70">
-        <button
-          type="button"
-          @click="setLoginMode(false)"
-          :class="[!isAdminMode ? 'bg-white text-blue-600 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900 font-medium']"
-          class="flex-1 py-2 sm:py-2.5 text-xs sm:text-sm rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-        >
-          <span class="material-symbols-outlined text-base sm:text-lg">school</span>
-          <span>{{ lang === 'kh' ? 'បេក្ខជនប្រឡង' : 'Candidate' }}</span>
-        </button>
-        <button
-          type="button"
-          @click="setLoginMode(true)"
-          :class="[isAdminMode ? 'bg-white text-blue-600 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900 font-medium']"
-          class="flex-1 py-2 sm:py-2.5 text-xs sm:text-sm rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-        >
-          <span class="material-symbols-outlined text-base sm:text-lg">admin_panel_settings</span>
-          <span>{{ lang === 'kh' ? 'អ្នកគ្រប់គ្រង' : 'Administrator' }}</span>
-        </button>
-      </div>
-
       <!-- Form Header -->
       <div class="mb-4 sm:mb-6 space-y-1 sm:space-y-1.5">
         <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
@@ -144,27 +122,7 @@ const rememberUsername = ref(false)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const isAdminMode = ref(false)
-const usernameInputRef = ref(null)
 const passwordInputRef = ref(null)
-
-const setLoginMode = (isAdmin) => {
-  isAdminMode.value = isAdmin
-  errorMessage.value = ''
-  if (!isAdmin) {
-    form.password = ''
-    nextTick(() => {
-      usernameInputRef.value?.focus?.()
-    })
-  } else {
-    nextTick(() => {
-      if (!form.username) {
-        usernameInputRef.value?.focus?.()
-      } else {
-        passwordInputRef.value?.focus?.()
-      }
-    })
-  }
-}
 
 const identifierCache = new Map()
 let checkDebounceTimer = null
@@ -174,21 +132,18 @@ const onUsernameInput = () => {
   errorMessage.value = ''
   const val = form.username.trim()
   if (!val) {
+    isAdminMode.value = false
     return
   }
 
   const lowerVal = val.toLowerCase()
-  if (['admin', 'superadmin', 'super admin', 'administrator'].includes(lowerVal)) {
+  if (lowerVal.includes('admin') || lowerVal.includes('super') || lowerVal.includes('dom')) {
     isAdminMode.value = true
-    return
   }
 
   // Instant response from in-memory cache
   if (identifierCache.has(lowerVal)) {
-    if (identifierCache.get(lowerVal)) {
-      isAdminMode.value = true
-    }
-    return
+    isAdminMode.value = identifierCache.get(lowerVal)
   }
 
   const reqId = ++currentRequestId
@@ -197,17 +152,17 @@ const onUsernameInput = () => {
   checkDebounceTimer = setTimeout(async () => {
     try {
       const res = await axios.post('/api/check-identifier', { identifier: val })
+      // Guard against race conditions from out-of-order async responses
       if (reqId !== currentRequestId) return
 
+      // Set admin mode directly based on Database check & cache
       const requiresPwd = Boolean(res.data?.requiresPassword)
       identifierCache.set(lowerVal, requiresPwd)
-      if (requiresPwd) {
-        isAdminMode.value = true
-      }
+      isAdminMode.value = requiresPwd
     } catch (e) {
       // Ignore background check errors
     }
-  }, 100)
+  }, 40)
 }
 
 onMounted(() => {
