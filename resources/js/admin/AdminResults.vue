@@ -1129,7 +1129,7 @@ const executeExportExcel = () => {
     ws['!merges'] = merges
   }
 
-  // Inject real Excel formulas into cells for Student mode
+  // Inject real Excel formulas into cells
   if (exportViewMode.value === 'student') {
     let studentRow = 1 // Row 0 is header
     exportGroupedStudents.value.forEach((s) => {
@@ -1140,6 +1140,22 @@ const executeExportExcel = () => {
       const excelEnd = endR + 1
 
       if (s.submissions && s.submissions.length) {
+        // Individual Exam Results: Column J (Result): =IF(H2 >= testPassScore, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")
+        s.submissions.forEach((sub, subIdx) => {
+          const rowIdx = startR + subIdx
+          const excelRow = rowIdx + 1
+          const testPassScore = (sub.passScore != null && Number(sub.passScore) > 0)
+            ? Number(sub.passScore)
+            : (sub.totalMarks > 0 ? (sub.totalMarks * 0.5) : 50)
+
+          const cellRefJ = XLSX.utils.encode_cell({ r: rowIdx, c: 9 })
+          if (ws[cellRefJ]) {
+            ws[cellRefJ].t = 's'
+            ws[cellRefJ].v = sub.isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)'
+            ws[cellRefJ].f = `IF(H${excelRow}>=${testPassScore}, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")`
+          }
+        })
+
         // 1. Column K (Total Score): =SUM(H2:H4) or =H2
         const cellRefK = XLSX.utils.encode_cell({ r: startR, c: 10 })
         if (ws[cellRefK]) {
@@ -1167,6 +1183,23 @@ const executeExportExcel = () => {
       }
 
       studentRow += subCount
+    })
+  } else {
+    // Detail mode formulas for Column J (Result)
+    exportFilteredResults.value.forEach((r, idx) => {
+      const rowIdx = idx + 1
+      const excelRow = rowIdx + 1
+      const testPassScore = (r.passScore != null && Number(r.passScore) > 0)
+        ? Number(r.passScore)
+        : (r.totalMarks > 0 ? (Number(r.totalMarks) * 0.5) : 50)
+      const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
+
+      const cellRefJ = XLSX.utils.encode_cell({ r: rowIdx, c: 9 })
+      if (ws[cellRefJ]) {
+        ws[cellRefJ].t = 's'
+        ws[cellRefJ].v = isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)'
+        ws[cellRefJ].f = `IF(H${excelRow}>=${testPassScore}, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")`
+      }
     })
   }
 
