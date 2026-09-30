@@ -107,7 +107,7 @@
                       :title="lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Randomize Questions'"
                     >
                       <span class="material-symbols-outlined text-[11px] text-blue-600">shuffle</span>
-                      {{ lang === 'kh' ? 'ចៃដន្យសំណួរ' : 'Shuffle Qs' }}
+                      {{ lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Shuffle Questions' }}
                     </span>
                     <span
                       v-if="test.randomizeAnswers"
@@ -115,7 +115,7 @@
                       :title="lang === 'kh' ? 'ចម្លើយចៃដន្យ' : 'Randomize Answers'"
                     >
                       <span class="material-symbols-outlined text-[11px] text-indigo-600">format_list_bulleted</span>
-                      {{ lang === 'kh' ? 'ចៃដន្យចម្លើយ' : 'Shuffle Answers' }}
+                      {{ lang === 'kh' ? 'ចម្លើយចៃដន្យ' : 'Shuffle Answers' }}
                     </span>
                   </div>
                   <div v-if="test.scheduledAt" class="text-xs text-slate-400 font-normal mt-0.5">
@@ -250,14 +250,14 @@
                     class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60"
                   >
                     <span class="material-symbols-outlined text-[11px] text-blue-600">shuffle</span>
-                    {{ lang === 'kh' ? 'ចៃដន្យសំណួរ' : 'Shuffle Qs' }}
+                    {{ lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Shuffle Questions' }}
                   </span>
                   <span
                     v-if="test.randomizeAnswers"
                     class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60"
                   >
                     <span class="material-symbols-outlined text-[11px] text-indigo-600">format_list_bulleted</span>
-                    {{ lang === 'kh' ? 'ចៃដន្យចម្លើយ' : 'Shuffle Answers' }}
+                    {{ lang === 'kh' ? 'ចម្លើយចៃដន្យ' : 'Shuffle Answers' }}
                   </span>
                 </div>
                 <div v-if="test.scheduledAt" class="text-[11px] text-slate-400 mt-0.5">
@@ -537,7 +537,7 @@
               class="border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-blue-700 justify-center"
               @click="openBulkImportModal"
             >
-              {{ lang === 'kh' ? 'នាំចូលសំណួរជាដុំ (Word / Excel)' : 'Import Excel / Word' }}
+              {{ lang === 'kh' ? 'នាំចូលសំណួរជាដុំ' : 'Import Questions' }}
             </Button>
           </div>
         </Card>
@@ -621,7 +621,7 @@
                 <div class="flex items-center justify-between gap-3">
                   <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800 min-w-0">
                     <span class="material-symbols-outlined text-base text-blue-600 shrink-0">menu_book</span>
-                    <span class="truncate">{{ lang === 'kh' ? 'អត្ថបទអាន (Reading Passage)' : 'Reading Passage' }}</span>
+                    <span class="truncate">{{ lang === 'kh' ? 'អត្ថបទអាន' : 'Reading Passage' }}</span>
                     <span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-extrabold shrink-0">Active</span>
                   </div>
                   <div class="flex items-center gap-3 shrink-0">
@@ -943,7 +943,7 @@
                 v-model.number="passScore"
                 type="number"
                 min="0"
-                :label="lang === 'kh' ? 'ពិន្ទុជាប់ (Pass Score)' : 'Pass Score'"
+                :label="lang === 'kh' ? 'ពិន្ទុជាប់' : 'Pass Score'"
                 placeholder="50"
               />
             </div>
@@ -955,7 +955,7 @@
                   {{ lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Randomize Questions' }}
                 </label>
                 <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200">
-                  <span class="text-xs font-medium text-slate-700">{{ randomizeQuestions ? (lang === 'kh' ? 'បើក (On)' : 'Enabled') : (lang === 'kh' ? 'បិទ (Off)' : 'Disabled') }}</span>
+                  <span class="text-xs font-medium text-slate-700">{{ randomizeQuestions ? (lang === 'kh' ? 'បើក' : 'Enabled') : (lang === 'kh' ? 'បិទ' : 'Disabled') }}</span>
                   <label class="relative inline-flex items-center cursor-pointer shrink-0">
                     <input type="checkbox" v-model="randomizeQuestions" class="sr-only peer">
                     <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
@@ -968,7 +968,7 @@
                   {{ lang === 'kh' ? 'ចម្លើយចៃដន្យ' : 'Randomize Answers' }}
                 </label>
                 <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200">
-                  <span class="text-xs font-medium text-slate-700">{{ randomizeAnswers ? (lang === 'kh' ? 'បើក (On)' : 'Enabled') : (lang === 'kh' ? 'បិទ (Off)' : 'Disabled') }}</span>
+                  <span class="text-xs font-medium text-slate-700">{{ randomizeAnswers ? (lang === 'kh' ? 'បើក' : 'Enabled') : (lang === 'kh' ? 'បិទ' : 'Disabled') }}</span>
                   <label class="relative inline-flex items-center cursor-pointer shrink-0">
                     <input type="checkbox" v-model="randomizeAnswers" class="sr-only peer">
                     <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-600"></div>
@@ -992,13 +992,13 @@
                 <strong class="text-emerald-700 font-bold text-xs">{{ passScore }} pts</strong>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-slate-600">{{ lang === 'kh' ? 'ចៃដន្យសំណួរ' : 'Randomize Questions' }}:</span>
+                <span class="text-slate-600">{{ lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Randomize Questions' }}:</span>
                 <strong class="font-bold text-xs" :class="randomizeQuestions ? 'text-blue-700' : 'text-slate-500'">
                   {{ randomizeQuestions ? (lang === 'kh' ? 'បើក' : 'Yes') : (lang === 'kh' ? 'បិទ' : 'No') }}
                 </strong>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-slate-600">{{ lang === 'kh' ? 'ចៃដន្យចម្លើយ' : 'Randomize Answers' }}:</span>
+                <span class="text-slate-600">{{ lang === 'kh' ? 'ចម្លើយចៃដន្យ' : 'Randomize Answers' }}:</span>
                 <strong class="font-bold text-xs" :class="randomizeAnswers ? 'text-indigo-700' : 'text-slate-500'">
                   {{ randomizeAnswers ? (lang === 'kh' ? 'បើក' : 'Yes') : (lang === 'kh' ? 'បិទ' : 'No') }}
                 </strong>
@@ -1052,7 +1052,7 @@
     <!-- ══════════════════════════════════════════════════════════════ -->
     <Modal
       v-model="showBulkImportModal"
-      :title="lang === 'kh' ? 'នាំចូលវិញ្ញាសាជាដុំ (Word / Text / Excel)' : 'Bulk Question Importer (Word / Text / Excel)'"
+      :title="lang === 'kh' ? 'នាំចូលវិញ្ញាសាជាដុំ' : 'Bulk Question Importer'"
       max-width="2xl"
     >
       <div class="space-y-3.5">
@@ -1065,7 +1065,7 @@
             @click="switchBulkImportTab('upload')"
           >
             <span class="material-symbols-outlined text-base">upload_file</span>
-            <span>{{ lang === 'kh' ? 'ផ្ទុកឯកសារ Word / Docs' : 'Upload Word / Docs File' }}</span>
+            <span>{{ lang === 'kh' ? 'ផ្ទុកឯកសារ Word' : 'Upload Word File' }}</span>
           </button>
           <button
             type="button"
@@ -1074,7 +1074,7 @@
             @click="switchBulkImportTab('excel')"
           >
             <span class="material-symbols-outlined text-base">table_view</span>
-            <span>{{ lang === 'kh' ? 'នាំចូល Excel (.xlsx / .xls)' : 'Import Excel (.xlsx / .xls)' }}</span>
+            <span>{{ lang === 'kh' ? 'នាំចូលឯកសារ Excel' : 'Import Excel File' }}</span>
           </button>
         </div>
 
@@ -1165,7 +1165,7 @@
             <div class="flex items-start gap-2.5">
               <span class="material-symbols-outlined text-2xl text-emerald-600 mt-0.5">description</span>
               <div>
-                <h4 class="font-bold text-xs text-emerald-950">{{ lang === 'kh' ? 'គម្រូសំណួរ Excel (.xlsx)' : 'Questions Excel Template (.xlsx)' }}</h4>
+                <h4 class="font-bold text-xs text-emerald-950">{{ lang === 'kh' ? 'គំរូសំណួរ Excel' : 'Excel Questions Template' }}</h4>
                 <p class="text-[11px] text-emerald-700 mt-0.5">{{ lang === 'kh' ? 'ទាញយកគម្រូដែលមានជួរឈរ សំណួរ, ជម្រើស ក-ឃ, ចម្លើយត្រឹមត្រូវ និងពិន្ទុ' : 'Download template with Question, Choices A-D, Answer & Points' }}</p>
               </div>
             </div>
@@ -1371,7 +1371,7 @@
               >
                 <div class="flex items-center gap-1 font-bold text-blue-800">
                   <span class="material-symbols-outlined text-xs">menu_book</span>
-                  <span>{{ lang === 'kh' ? 'អត្ថបទអាន (Reading Passage)' : 'Reading Passage' }}</span>
+                  <span>{{ lang === 'kh' ? 'អត្ថបទអាន' : 'Reading Passage' }}</span>
                 </div>
                 <p class="line-clamp-2 text-slate-700 italic font-normal leading-relaxed">{{ pq.passage }}</p>
               </div>
@@ -1540,8 +1540,8 @@ const t = computed(() => {
       searchPlaceholder: 'ស្វែងរកការប្រឡង...',
       examName: 'ឈ្មោះការប្រឡង',
       examShift: 'កាលវិភាគ & វេនប្រឡង',
-      examDays: 'កាលវិភាគថ្ងៃ (Exam Days)',
-      academicYears: 'ឆ្នាំសិក្សា (Academic Years)',
+      examDays: 'កាលវិភាគថ្ងៃ',
+      academicYears: 'ឆ្នាំសិក្សា',
       allDays: 'គ្រប់ថ្ងៃទាំងអស់',
       allYears: 'គ្រប់ឆ្នាំសិក្សា',
       duration: 'រយៈពេល',
@@ -1575,9 +1575,9 @@ const t = computed(() => {
       totalMarks: 'ពិន្ទុសរុប',
       totalQuestions: 'ចំនួនសំណួរ',
       totalScore: 'ពិន្ទុសរុបគណនា',
-      publishExam: 'ចេញការប្រឡង (Publish)',
+      publishExam: 'ចេញផ្សាយការប្រឡង',
       updateAndPublish: 'រក្សាទុកការកែសម្រួល',
-      saveDraft: 'រក្សាទុកជាព្រាង (Draft)',
+      saveDraft: 'រក្សាទុកជាព្រាង',
       edit: 'កែប្រែ',
       deleteExamTitle: 'លុបការប្រឡងនេះ?',
       delete: 'លុប',
@@ -2129,17 +2129,20 @@ const exportTestToExcel = async (test) => {
       return
     }
 
+    const isKh = lang.value === 'kh'
     const rows = [
-      ['កាលវិភាគ & វិញ្ញាសាប្រឡង (Exam Details)'],
-      ['ឈ្មោះការប្រឡង (Exam Name):', tData.name || ''],
-      ['វេនប្រឡង (Shift):', tData.sessionName || tData.session_name || 'ទូទៅ (General)'],
-      ['រយៈពេល (Duration):', `${tData.durationMinutes || 0} នាទី (mins)`],
-      ['ពិន្ទុសរុប (Total Marks):', tData.totalMarks || 0],
-      ['ពិន្ទុជាប់ (Pass Score):', `${tData.passScore ?? 50}%`],
-      ['ចៃដន្យសំណួរ (Randomize Questions):', tData.randomizeQuestions ? 'បាទ/ចាស (Yes)' : 'ទេ (No)'],
-      ['ចៃដន្យចម្លើយ (Randomize Answers):', tData.randomizeAnswers ? 'បាទ/ចាស (Yes)' : 'ទេ (No)'],
+      [isKh ? 'កាលវិភាគ & ព័ត៌មានវិញ្ញាសាប្រឡង' : 'Exam Details & Schedule'],
+      [isKh ? 'ឈ្មោះការប្រឡង៖' : 'Exam Name:', tData.name || ''],
+      [isKh ? 'វេនប្រឡង៖' : 'Exam Shift:', tData.sessionName || tData.session_name || (isKh ? 'គ្រប់វេនទាំងអស់' : 'All Shifts')],
+      [isKh ? 'រយៈពេល៖' : 'Duration:', isKh ? `${tData.durationMinutes || 0} នាទី` : `${tData.durationMinutes || 0} mins`],
+      [isKh ? 'ពិន្ទុសរុប៖' : 'Total Marks:', isKh ? `${tData.totalMarks || 0} ពិន្ទុ` : `${tData.totalMarks || 0} pts`],
+      [isKh ? 'ពិន្ទុជាប់៖' : 'Pass Score:', `${tData.passScore ?? 50}%`],
+      [isKh ? 'សំណួរចៃដន្យ៖' : 'Randomize Questions:', tData.randomizeQuestions ? (isKh ? 'បើក' : 'Yes') : (isKh ? 'បិទ' : 'No')],
+      [isKh ? 'ចម្លើយចៃដន្យ៖' : 'Randomize Answers:', tData.randomizeAnswers ? (isKh ? 'បើក' : 'Yes') : (isKh ? 'បិទ' : 'No')],
       [],
-      ['ល.រ (No.)', 'ខ្លឹមសារសំណួរ (Question)', 'អត្ថបទ (Passage)', 'ពិន្ទុ (Points)', 'ជម្រើស ក (A)', 'ជម្រើស ខ (B)', 'ជម្រើស គ (C)', 'ជម្រើស ឃ (D)', 'ចម្លើយត្រឹមត្រូវ (Answer)']
+      isKh 
+        ? ['ល.រ', 'ខ្លឹមសារសំណួរ', 'អត្ថបទអាន', 'ពិន្ទុ', 'ជម្រើស ក', 'ជម្រើស ខ', 'ជម្រើស គ', 'ជម្រើស ឃ', 'ចម្លើយត្រឹមត្រូវ']
+        : ['No.', 'Question Text', 'Passage', 'Points', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer']
     ]
 
     testQuestions.forEach((q, idx) => {
@@ -2152,7 +2155,9 @@ const exportTestToExcel = async (test) => {
       let correctAns = ''
       const correctIdx = answers.findIndex(a => a.correct)
       if (correctIdx >= 0) {
-        correctAns = ['A (ក)', 'B (ខ)', 'C (គ)', 'D (ឃ)', 'E (ង)'][correctIdx] || `ជម្រើសទី ${correctIdx + 1}`
+        correctAns = isKh
+          ? (['ក', 'ខ', 'គ', 'ឃ', 'ង'][correctIdx] || `ជម្រើសទី ${correctIdx + 1}`)
+          : (['A', 'B', 'C', 'D', 'E'][correctIdx] || `Option ${correctIdx + 1}`)
       }
 
       rows.push([
@@ -2182,7 +2187,7 @@ const exportTestToExcel = async (test) => {
     ]
 
     const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Exam Questions')
+    XLSX.utils.book_append_sheet(workbook, worksheet, isKh ? 'វិញ្ញាសាប្រឡង' : 'Exam Questions')
     XLSX.writeFile(workbook, `Exam_${(tData.name || 'exam').replace(/\s+/g, '_')}.xlsx`)
     toastSuccess(lang.value === 'kh' ? 'ទាញយកឯកសារ Excel (.xlsx) ជោគជ័យ' : 'Excel file downloaded successfully')
   } catch (e) {
@@ -2344,28 +2349,28 @@ const exportTestToPdf = async (test) => {
         <body>
           <div class="header">
             <h1>${tData.name || 'Exam'}</h1>
-            <p>វិទ្យាស្ថានជាតិបណ្តុះបណ្តាលបច្ចេកទេស (National Technical Training Institute)</p>
+            <p>${isKh ? 'វិទ្យាស្ថានជាតិបណ្តុះបណ្តាលបច្ចេកទេស' : 'National Technical Training Institute'}</p>
           </div>
           <div class="meta-grid">
             <div class="meta-item">
-              <strong>វេនប្រឡង (Shift):</strong>
-              <span>${tData.sessionName || tData.session_name || 'ទូទៅ'}</span>
+              <strong>${isKh ? 'វេនប្រឡង៖' : 'Shift:'}</strong>
+              <span>${tData.sessionName || tData.session_name || (isKh ? 'គ្រប់វេនទាំងអស់' : 'All Shifts')}</span>
             </div>
             <div class="meta-item">
-              <strong>រយៈពេល (Duration):</strong>
-              <span>${tData.durationMinutes || 45} នាទី</span>
+              <strong>${isKh ? 'រយៈពេល៖' : 'Duration:'}</strong>
+              <span>${tData.durationMinutes || 45} ${isKh ? 'នាទី' : 'mins'}</span>
             </div>
             <div class="meta-item">
-              <strong>ពិន្ទុសរុប (Total Marks):</strong>
-              <span>${tData.totalMarks || 0} ពិន្ទុ</span>
+              <strong>${isKh ? 'ពិន្ទុសរុប៖' : 'Total Marks:'}</strong>
+              <span>${tData.totalMarks || 0} ${isKh ? 'ពិន្ទុ' : 'pts'}</span>
             </div>
             <div class="meta-item">
-              <strong>ពិន្ទុជាប់ (Pass Score):</strong>
+              <strong>${isKh ? 'ពិន្ទុជាប់៖' : 'Pass Score:'}</strong>
               <span>${tData.passScore ?? 50}%</span>
             </div>
           </div>
           <div class="questions-list">
-            ${questionsHtml || '<p style="text-align: center; color: #94a3b8; padding: 24px;">មិនមានសំណួរក្នុងវិញ្ញាសានេះទេ (No questions in this test)</p>'}
+            ${questionsHtml || `<p style="text-align: center; color: #94a3b8; padding: 24px;">${isKh ? 'មិនមានសំណួរក្នុងវិញ្ញាសានេះទេ' : 'No questions in this test'}</p>`}
           </div>
           <script>
             window.onload = function() {

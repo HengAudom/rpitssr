@@ -62,7 +62,7 @@ def export_exam_to_docx(json_path, output_path):
             pass_p = doc.add_paragraph()
             pass_p.paragraph_format.space_before = Pt(14)
             pass_p.paragraph_format.space_after = Pt(6)
-            p_label = pass_p.add_run("📖 [អត្ថបទអាន / Reading Passage]\n")
+            p_label = pass_p.add_run("📖 [អត្ថបទអាន]\n")
             p_label.bold = True
             p_label.font.size = Pt(11)
             p_label.font.color.rgb = RGBColor(37, 99, 235)

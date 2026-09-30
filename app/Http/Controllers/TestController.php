@@ -429,7 +429,7 @@ class TestController extends Controller
         foreach ($test->questions as $index => $q) {
             if ($q->Passage && $q->Passage !== $lastPassage) {
                 $lines[] = "--------------------------------------------------";
-                $lines[] = "[អត្ថបទអាន / Reading Passage]:";
+                $lines[] = "[អត្ថបទអាន]:";
                 $lines[] = $q->Passage;
                 $lines[] = "--------------------------------------------------";
                 $lines[] = "";
