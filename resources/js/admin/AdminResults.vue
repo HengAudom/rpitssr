@@ -1173,6 +1173,8 @@ const executeExportExcel = () => {
   // Apply rich styling with xlsx-js-style
   const FONT_NAME = 'Khmer OS Battambang'
   const numCols = colWidths.length
+  const BORDER_COLOR = '94A3B8' // Crisp slate border, clearly visible in Excel
+  const SEPARATOR_COLOR = '1E3A8A' // Deep Navy boundary separator between students
 
   // Style Header Row (Row 0)
   for (let c = 0; c < numCols; c++) {
@@ -1183,71 +1185,140 @@ const executeExportExcel = () => {
         fill: { fgColor: { rgb: '1E3A8A' } },
         alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
         border: {
-          top: { style: 'thin', color: { rgb: '93C5FD' } },
-          bottom: { style: 'medium', color: { rgb: '1D4ED8' } },
-          left: { style: 'thin', color: { rgb: '93C5FD' } },
-          right: { style: 'thin', color: { rgb: '93C5FD' } }
+          top: { style: 'medium', color: { rgb: '1E3A8A' } },
+          bottom: { style: 'medium', color: { rgb: '1E3A8A' } },
+          left: { style: 'thin', color: { rgb: '60A5FA' } },
+          right: { style: 'thin', color: { rgb: '60A5FA' } }
         }
       }
     }
   }
 
   // Style Data Rows
-  for (let r = 1; r <= exportData.length; r++) {
-    const isEven = r % 2 === 0
-    const rowBg = isEven ? 'F8FAFC' : 'FFFFFF'
+  if (exportViewMode.value === 'student') {
+    let curRowIdx = 1
+    exportGroupedStudents.value.forEach((s, sIdx) => {
+      const subCount = s.submissions && s.submissions.length ? s.submissions.length : 1
+      const isEvenStudent = sIdx % 2 === 0
+      const studentBg = isEvenStudent ? 'FFFFFF' : 'F8FAFC'
 
-    for (let c = 0; c < numCols; c++) {
-      const cellRef = XLSX.utils.encode_cell({ r, c })
-      if (ws[cellRef]) {
+      for (let offset = 0; offset < subCount; offset++) {
+        const r = curRowIdx + offset
+        const isStudentLastRow = (offset === subCount - 1)
+        const bottomStyle = isStudentLastRow ? 'medium' : 'thin'
+        const bottomColor = isStudentLastRow ? SEPARATOR_COLOR : 'CBD5E1'
+        const sub = s.submissions && s.submissions[offset] ? s.submissions[offset] : null
+
+        for (let c = 0; c < numCols; c++) {
+          const cellRef = XLSX.utils.encode_cell({ r, c })
+          if (!ws[cellRef]) {
+            ws[cellRef] = { t: 's', v: '' }
+          }
+
+          let fontColor = '1E293B'
+          let fontBold = false
+          let cellBg = studentBg
+
+          // Student ID (col 2)
+          if (c === 2) {
+            fontColor = '2563EB'
+            fontBold = true
+          }
+
+          // Individual Test Result (col 9)
+          if (c === 9 && sub) {
+            if (sub.isPassed) {
+              fontColor = '166534'
+              cellBg = 'DCFCE7'
+              fontBold = true
+            } else {
+              fontColor = '991B1B'
+              cellBg = 'FEE2E2'
+              fontBold = true
+            }
+          }
+
+          // Total Score (col 10)
+          if (c === 10) {
+            fontBold = true
+          }
+
+          // Average Score (col 11)
+          if (c === 11) {
+            fontColor = '1E3A8A'
+            fontBold = true
+          }
+
+          // Overall Result (col 12) - apply consistent background across all rows in merged student block
+          if (c === 12) {
+            if (s.isOverallPassed) {
+              fontColor = '166534'
+              cellBg = 'DCFCE7'
+              fontBold = true
+            } else {
+              fontColor = '991B1B'
+              cellBg = 'FEE2E2'
+              fontBold = true
+            }
+          }
+
+          const isCenter = (c === 0 || c === 2 || c === 3 || c === 4 || c === 5 || c === 7 || c === 8 || c === 9 || c === 10 || c === 11 || c === 12 || c === 13)
+
+          ws[cellRef].s = {
+            font: {
+              name: FONT_NAME,
+              sz: 10.5,
+              color: { rgb: fontColor },
+              bold: fontBold
+            },
+            fill: { fgColor: { rgb: cellBg } },
+            alignment: {
+              horizontal: isCenter ? 'center' : 'left',
+              vertical: 'center',
+              wrapText: true
+            },
+            border: {
+              top: { style: 'thin', color: { rgb: BORDER_COLOR } },
+              bottom: { style: bottomStyle, color: { rgb: bottomColor } },
+              left: { style: 'thin', color: { rgb: BORDER_COLOR } },
+              right: { style: 'thin', color: { rgb: BORDER_COLOR } }
+            }
+          }
+        }
+      }
+
+      curRowIdx += subCount
+    })
+  } else {
+    // Detail Mode
+    for (let r = 1; r <= exportData.length; r++) {
+      const isEven = r % 2 === 0
+      const rowBg = isEven ? 'F8FAFC' : 'FFFFFF'
+
+      for (let c = 0; c < numCols; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c })
+        if (!ws[cellRef]) {
+          ws[cellRef] = { t: 's', v: '' }
+        }
+
         const val = String(ws[cellRef].v || '')
         let fontColor = '1E293B'
         let fontBold = false
         let cellBg = rowBg
 
-        if (exportViewMode.value === 'student') {
-          // Student ID
-          if (c === 2) {
-            fontColor = '2563EB'
+        if (c === 2) {
+          fontColor = '2563EB'
+          fontBold = true
+        }
+        if (c === 9) {
+          if (val.includes('ជាប់') || val.includes('Pass')) {
+            fontColor = '166534'
+            cellBg = 'DCFCE7'
             fontBold = true
-          }
-          // Test Result (col 9) or Overall Result (col 12)
-          if (c === 9 || c === 12) {
-            if (val.includes('ជាប់') || val.includes('Pass')) {
-              fontColor = '166534'
-              cellBg = 'DCFCE7'
-              fontBold = true
-            } else if (val.includes('ធ្លាក់') || val.includes('Fail')) {
-              fontColor = '991B1B'
-              cellBg = 'FEE2E2'
-              fontBold = true
-            }
-          }
-          // Average Score (col 11)
-          if (c === 11 && val && val !== '-') {
-            fontColor = '1E3A8A'
+          } else if (val.includes('ធ្លាក់') || val.includes('Fail')) {
+            fontColor = '991B1B'
+            cellBg = 'FEE2E2'
             fontBold = true
-          }
-          // Total Score (col 10)
-          if (c === 10 && val && val !== '-') {
-            fontBold = true
-          }
-        } else {
-          // Detail mode
-          if (c === 2) {
-            fontColor = '2563EB'
-            fontBold = true
-          }
-          if (c === 9) {
-            if (val.includes('ជាប់') || val.includes('Pass')) {
-              fontColor = '166534'
-              cellBg = 'DCFCE7'
-              fontBold = true
-            } else if (val.includes('ធ្លាក់') || val.includes('Fail')) {
-              fontColor = '991B1B'
-              cellBg = 'FEE2E2'
-              fontBold = true
-            }
           }
         }
 
@@ -1267,10 +1338,10 @@ const executeExportExcel = () => {
             wrapText: true
           },
           border: {
-            top: { style: 'thin', color: { rgb: 'E2E8F0' } },
-            bottom: { style: 'thin', color: { rgb: 'E2E8F0' } },
-            left: { style: 'thin', color: { rgb: 'E2E8F0' } },
-            right: { style: 'thin', color: { rgb: 'E2E8F0' } }
+            top: { style: 'thin', color: { rgb: BORDER_COLOR } },
+            bottom: { style: 'thin', color: { rgb: BORDER_COLOR } },
+            left: { style: 'thin', color: { rgb: BORDER_COLOR } },
+            right: { style: 'thin', color: { rgb: BORDER_COLOR } }
           }
         }
       }
