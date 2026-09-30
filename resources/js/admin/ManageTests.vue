@@ -968,7 +968,8 @@
                 v-model.number="passScore"
                 type="number"
                 min="0"
-                :label="lang === 'kh' ? 'ពិន្ទុជាប់' : 'Pass Score'"
+                max="100"
+                :label="lang === 'kh' ? 'ពិន្ទុជាប់ (%)' : 'Pass Score (%)'"
                 placeholder="50"
               />
               <Input
@@ -1037,7 +1038,7 @@
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-slate-600">{{ lang === 'kh' ? 'ពិន្ទុជាប់' : 'Pass Score' }}:</span>
-                <strong class="text-emerald-700 font-bold text-xs">{{ passScore }} pts</strong>
+                <strong class="text-emerald-700 font-bold text-xs">{{ passScore }}%</strong>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-slate-600">{{ lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Randomize Questions' }}:</span>

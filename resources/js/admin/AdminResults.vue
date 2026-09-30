@@ -524,10 +524,11 @@
                   v-model.number="exportPassAverageScore"
                   type="number"
                   min="0"
+                  max="100"
                   class="w-16 text-center py-1 bg-indigo-50/50 rounded-lg border border-indigo-300 text-xs font-extrabold text-indigo-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   placeholder="50"
                 />
-                <span class="text-[11px] text-slate-500 font-medium">{{ lang === 'kh' ? 'ពិន្ទុ' : 'pts' }}</span>
+                <span class="text-[11px] text-slate-500 font-medium">%</span>
               </div>
             </div>
           </div>
@@ -543,7 +544,7 @@
             </div>
             <span class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 text-[10.5px]">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              {{ lang === 'kh' ? `ជាប់កាលណា មធ្យមភាគ ≥ ${exportPassAverageScore ?? 50}` : `Pass if Average ≥ ${exportPassAverageScore ?? 50}` }}
+              {{ lang === 'kh' ? `ជាប់កាលណា មធ្យមភាគ ≥ ${exportPassAverageScore ?? 50}%` : `Pass if Average ≥ ${exportPassAverageScore ?? 50}%` }}
             </span>
           </div>
         </div>
@@ -855,16 +856,20 @@ const exportGroupedStudents = computed(() => {
     }
 
     const student = map.get(key)
-    const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
+    const passPercent = (r.passScore != null && Number(r.passScore) > 0) ? Number(r.passScore) : 50
+    const testTotalMarks = Number(r.totalMarks) || 0
+    const passScorePoints = testTotalMarks > 0 ? Number(((passPercent / 100) * testTotalMarks).toFixed(2)) : passPercent
+    const isPassed = testTotalMarks > 0 ? (Number(r.score) >= passScorePoints) : (Number(r.accuracy) >= passPercent)
 
     const subData = {
       testId: r.testId,
       testName: r.testName || 'វិញ្ញាសា',
       score: Number(r.score) || 0,
-      totalMarks: Number(r.totalMarks) || 0,
+      totalMarks: testTotalMarks,
       totalCorrect: Number(r.totalCorrect) || 0,
       accuracy: Number(r.accuracy) || 0,
-      passScore: r.passScore,
+      passScore: passPercent,
+      passScorePoints,
       isPassed,
       completedAt: r.completedAt
     }
@@ -888,7 +893,7 @@ const exportGroupedStudents = computed(() => {
   })
 
   const requiredCount = Number(exportRequiredSubjects.value) > 0 ? Number(exportRequiredSubjects.value) : 1
-  const passThreshold = Number(exportPassAverageScore.value != null && exportPassAverageScore.value !== '' ? exportPassAverageScore.value : 50)
+  const passPercentThreshold = Number(exportPassAverageScore.value != null && exportPassAverageScore.value !== '' ? exportPassAverageScore.value : 50)
 
   return Array.from(map.values()).map(s => {
     const totalScore = s.submissions.reduce((acc, sub) => acc + sub.score, 0)
@@ -898,7 +903,11 @@ const exportGroupedStudents = computed(() => {
     // Divisor & Average calculation
     const divisor = requiredCount > 0 ? requiredCount : (s.submissions.length || 1)
     const averageScore = Number((totalScore / divisor).toFixed(2))
-    const isOverallPassed = averageScore >= passThreshold
+
+    // Calculate passing average score threshold in points based on the average max marks of the exams
+    const averageMaxMarks = divisor > 0 ? (totalMaxMarks / divisor) : totalMaxMarks
+    const passThresholdPoints = Number(((passPercentThreshold / 100) * averageMaxMarks).toFixed(2))
+    const isOverallPassed = averageScore >= passThresholdPoints
 
     const allPassed = s.submissions.length > 0 && s.submissions.every(sub => sub.isPassed)
     const avgAccuracy = totalMaxMarks > 0
@@ -915,7 +924,8 @@ const exportGroupedStudents = computed(() => {
       divisor,
       averageScore,
       isOverallPassed,
-      passThreshold,
+      passThreshold: passPercentThreshold,
+      passThresholdPoints,
       allPassed,
       avgAccuracy,
       examsSummary,
@@ -1050,9 +1060,14 @@ const executeExportExcel = () => {
         })
       } else {
         s.submissions.forEach((sub, subIdx) => {
-          const testPassScore = (sub.passScore != null && Number(sub.passScore) > 0)
-            ? Number(sub.passScore)
-            : (sub.totalMarks > 0 ? Math.round(sub.totalMarks * 0.5) : 50)
+          const passPercent = (sub.passScore != null && Number(sub.passScore) > 0) ? Number(sub.passScore) : 50
+          const testTotalMarks = Number(sub.totalMarks) || 0
+          const testPassScore = sub.passScorePoints != null
+            ? sub.passScorePoints
+            : (testTotalMarks > 0 ? Number(((passPercent / 100) * testTotalMarks).toFixed(2)) : passPercent)
+          const isPassed = sub.isPassed != null
+            ? sub.isPassed
+            : (testTotalMarks > 0 ? (Number(sub.score) >= testPassScore) : (Number(sub.accuracy) >= passPercent))
 
           exportData.push({
             'ល.រ (No.)': subIdx === 0 ? studentIdx + 1 : '',
@@ -1064,7 +1079,7 @@ const executeExportExcel = () => {
             'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': `${sub.testName}: ${sub.score}/${sub.totalMarks}`,
             'ពិន្ទុ (Score)': sub.score,
             'ពិន្ទុជាប់ (Pass Score)': testPassScore,
-            'លទ្ធផល (Result)': sub.isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
+            'លទ្ធផល (Result)': isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
             'ពិន្ទុសរុបគ្រប់មុខ (Total Score)': subIdx === 0 ? s.totalScore : '',
             'មធ្យមភាគ (Average Score)': subIdx === 0 ? s.averageScore : '',
             'លទ្ធផលរួម (Overall Result)': subIdx === 0 ? overallResultText : '',
@@ -1095,10 +1110,10 @@ const executeExportExcel = () => {
   } else {
     // Detail by submission mode
     exportData = exportFilteredResults.value.map((r, index) => {
-      const testPassScore = (r.passScore != null && Number(r.passScore) > 0)
-        ? Number(r.passScore)
-        : (r.totalMarks > 0 ? Math.round(r.totalMarks * 0.5) : 50)
-      const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
+      const passPercent = (r.passScore != null && Number(r.passScore) > 0) ? Number(r.passScore) : 50
+      const testTotalMarks = Number(r.totalMarks) || 0
+      const testPassScore = testTotalMarks > 0 ? Number(((passPercent / 100) * testTotalMarks).toFixed(2)) : passPercent
+      const isPassed = testTotalMarks > 0 ? (Number(r.score) >= testPassScore) : (Number(r.accuracy) >= passPercent)
       const cleanDay = (!isEnglishDay(r.examDay || r.days) ? (r.examDay || r.days) : '') || '-'
       return {
         'ល.រ (No.)': index + 1,
@@ -1108,7 +1123,7 @@ const executeExportExcel = () => {
         'វេនប្រឡង (Exam Shift)': r.sessionName || '-',
         'កាលវិភាគថ្ងៃ (Exam Day)': cleanDay,
         'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': r.testName || '-',
-        'ពិន្ទុ (Score)': r.score,
+        'ពិន្ទុ (Score)': Number(r.score) || 0,
         'ពិន្ទុជាប់ (Pass Score)': testPassScore,
         'លទ្ធផល (Result)': isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
         'កាលបរិច្ឆេទ (Date)': formatDate(r.completedAt || r.examDate)
@@ -1177,12 +1192,12 @@ const executeExportExcel = () => {
           ws[cellRefL].z = '0.00'
         }
 
-        // 3. Column M (Overall Result): =IF(L2 >= passThreshold, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")
+        // 3. Column M (Overall Result): =IF(L2 >= passThresholdPoints, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")
         const cellRefM = XLSX.utils.encode_cell({ r: startR, c: 12 })
         if (ws[cellRefM]) {
           ws[cellRefM].t = 's'
           ws[cellRefM].v = s.isOverallPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)'
-          ws[cellRefM].f = `IF(L${excelStart}>=${s.passThreshold}, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")`
+          ws[cellRefM].f = `IF(L${excelStart}>=${s.passThresholdPoints}, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")`
         }
       }
 
@@ -1193,7 +1208,10 @@ const executeExportExcel = () => {
     exportFilteredResults.value.forEach((r, idx) => {
       const rowIdx = idx + 1
       const excelRow = rowIdx + 1
-      const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
+      const passPercent = (r.passScore != null && Number(r.passScore) > 0) ? Number(r.passScore) : 50
+      const testTotalMarks = Number(r.totalMarks) || 0
+      const testPassScore = testTotalMarks > 0 ? Number(((passPercent / 100) * testTotalMarks).toFixed(2)) : passPercent
+      const isPassed = testTotalMarks > 0 ? (Number(r.score) >= testPassScore) : (Number(r.accuracy) >= passPercent)
 
       const cellRefJ = XLSX.utils.encode_cell({ r: rowIdx, c: 9 })
       if (ws[cellRefJ]) {
@@ -1510,7 +1528,7 @@ const executeExportPDF = () => {
                     ${s.isOverallPassed ? (lang.value === 'kh' ? 'ជាប់' : 'Pass') : (lang.value === 'kh' ? 'ធ្លាក់' : 'Fail')}
                   </span>
                   <div style="font-size: 9px; font-weight: normal; color: #64748b; margin-top: 2px;">
-                    ${lang.value === 'kh' ? `មធ្យមភាគ ≥ ${s.passThreshold}` : `Avg ≥ ${s.passThreshold}`}
+                    ${lang.value === 'kh' ? `មធ្យមភាគ ≥ ${s.passThresholdPoints} (${s.passThreshold}%)` : `Avg ≥ ${s.passThresholdPoints} (${s.passThreshold}%)`}
                   </div>
                 </td>
                 <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDate(sub.completedAt || s.examDate)}</td>
@@ -1554,7 +1572,10 @@ const executeExportPDF = () => {
     `
 
     tableRowsHtml = exportFilteredResults.value.map((r, idx) => {
-      const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
+      const passPercent = (r.passScore != null && Number(r.passScore) > 0) ? Number(r.passScore) : 50
+      const testTotalMarks = Number(r.totalMarks) || 0
+      const testPassScore = testTotalMarks > 0 ? Number(((passPercent / 100) * testTotalMarks).toFixed(2)) : passPercent
+      const isPassed = testTotalMarks > 0 ? (Number(r.score) >= testPassScore) : (Number(r.accuracy) >= passPercent)
       const cleanDay = (!isEnglishDay(r.examDay || r.days) ? (r.examDay || r.days) : '') || '-'
       return `
         <tr>
