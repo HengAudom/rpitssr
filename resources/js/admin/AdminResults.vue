@@ -1041,7 +1041,7 @@ const executeExportExcel = () => {
           'កាលវិភាគថ្ងៃ (Exam Day)': s.examDay,
           'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': '-',
           'ពិន្ទុ (Score)': '-',
-          'អត្រាត្រឹមត្រូវ (Accuracy)': '-',
+          'ពិន្ទុជាប់ (Pass Score)': '-',
           'លទ្ធផល (Result)': '-',
           'ពិន្ទុសរុបគ្រប់មុខ (Total Score)': '-',
           'មធ្យមភាគ (Average Score)': '-',
@@ -1050,6 +1050,10 @@ const executeExportExcel = () => {
         })
       } else {
         s.submissions.forEach((sub, subIdx) => {
+          const testPassScore = (sub.passScore != null && Number(sub.passScore) > 0)
+            ? Number(sub.passScore)
+            : (sub.totalMarks > 0 ? Math.round(sub.totalMarks * 0.5) : 50)
+
           exportData.push({
             'ល.រ (No.)': subIdx === 0 ? studentIdx + 1 : '',
             'ឈ្មោះសិស្ស (Student Name)': subIdx === 0 ? s.studentName : '',
@@ -1059,7 +1063,7 @@ const executeExportExcel = () => {
             'កាលវិភាគថ្ងៃ (Exam Day)': subIdx === 0 ? s.examDay : '',
             'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': `${sub.testName}: ${sub.score}/${sub.totalMarks}`,
             'ពិន្ទុ (Score)': sub.score,
-            'អត្រាត្រឹមត្រូវ (Accuracy)': `${sub.accuracy}%`,
+            'ពិន្ទុជាប់ (Pass Score)': testPassScore,
             'លទ្ធផល (Result)': sub.isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
             'ពិន្ទុសរុបគ្រប់មុខ (Total Score)': subIdx === 0 ? s.totalScore : '',
             'មធ្យមភាគ (Average Score)': subIdx === 0 ? s.averageScore : '',
@@ -1081,7 +1085,7 @@ const executeExportExcel = () => {
       { wch: 16 }, // Day
       { wch: 45 }, // មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)
       { wch: 16 }, // Score
-      { wch: 16 }, // Accuracy
+      { wch: 18 }, // Pass Score
       { wch: 16 }, // Result
       { wch: 20 }, // Total Score
       { wch: 18 }, // Average Score
@@ -1091,6 +1095,9 @@ const executeExportExcel = () => {
   } else {
     // Detail by submission mode
     exportData = exportFilteredResults.value.map((r, index) => {
+      const testPassScore = (r.passScore != null && Number(r.passScore) > 0)
+        ? Number(r.passScore)
+        : (r.totalMarks > 0 ? Math.round(r.totalMarks * 0.5) : 50)
       const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
       const cleanDay = (!isEnglishDay(r.examDay || r.days) ? (r.examDay || r.days) : '') || '-'
       return {
@@ -1102,7 +1109,7 @@ const executeExportExcel = () => {
         'កាលវិភាគថ្ងៃ (Exam Day)': cleanDay,
         'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': r.testName || '-',
         'ពិន្ទុ (Score)': r.score,
-        'អត្រាត្រឹមត្រូវ (Accuracy)': `${r.accuracy || 0}%`,
+        'ពិន្ទុជាប់ (Pass Score)': testPassScore,
         'លទ្ធផល (Result)': isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
         'កាលបរិច្ឆេទ (Date)': formatDate(r.completedAt || r.examDate)
       }
@@ -1117,7 +1124,7 @@ const executeExportExcel = () => {
       { wch: 16 },
       { wch: 34 },
       { wch: 16 },
-      { wch: 16 },
+      { wch: 18 },
       { wch: 16 },
       { wch: 22 }
     ]
@@ -1140,19 +1147,16 @@ const executeExportExcel = () => {
       const excelEnd = endR + 1
 
       if (s.submissions && s.submissions.length) {
-        // Individual Exam Results: Column J (Result): =IF(H2 >= testPassScore, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")
+        // Individual Exam Results: Column J (Result): =IF(H... >= I..., "ជាប់ (Pass)", "ធ្លាក់ (Fail)")
         s.submissions.forEach((sub, subIdx) => {
           const rowIdx = startR + subIdx
           const excelRow = rowIdx + 1
-          const testPassScore = (sub.passScore != null && Number(sub.passScore) > 0)
-            ? Number(sub.passScore)
-            : (sub.totalMarks > 0 ? (sub.totalMarks * 0.5) : 50)
 
           const cellRefJ = XLSX.utils.encode_cell({ r: rowIdx, c: 9 })
           if (ws[cellRefJ]) {
             ws[cellRefJ].t = 's'
             ws[cellRefJ].v = sub.isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)'
-            ws[cellRefJ].f = `IF(H${excelRow}>=${testPassScore}, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")`
+            ws[cellRefJ].f = `IF(H${excelRow}>=I${excelRow}, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")`
           }
         })
 
@@ -1185,20 +1189,17 @@ const executeExportExcel = () => {
       studentRow += subCount
     })
   } else {
-    // Detail mode formulas for Column J (Result)
+    // Detail mode formulas for Column J (Result): =IF(H... >= I..., "ជាប់ (Pass)", "ធ្លាក់ (Fail)")
     exportFilteredResults.value.forEach((r, idx) => {
       const rowIdx = idx + 1
       const excelRow = rowIdx + 1
-      const testPassScore = (r.passScore != null && Number(r.passScore) > 0)
-        ? Number(r.passScore)
-        : (r.totalMarks > 0 ? (Number(r.totalMarks) * 0.5) : 50)
       const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
 
       const cellRefJ = XLSX.utils.encode_cell({ r: rowIdx, c: 9 })
       if (ws[cellRefJ]) {
         ws[cellRefJ].t = 's'
         ws[cellRefJ].v = isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)'
-        ws[cellRefJ].f = `IF(H${excelRow}>=${testPassScore}, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")`
+        ws[cellRefJ].f = `IF(H${excelRow}>=I${excelRow}, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")`
       }
     })
   }
