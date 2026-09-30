@@ -881,7 +881,7 @@ import { useToast } from '../composables/useToast'
 import { usePermissions } from '../composables/usePermissions'
 import { useRealtimePoll, broadcastSync } from '../composables/useRealtimePoll'
 import { fastCache } from '../stores/fastCache'
-import * as XLSX from 'xlsx'
+import XLSX from 'xlsx-js-style'
 
 const { lang } = useLang()
 const { can } = usePermissions()
@@ -1084,29 +1084,159 @@ const clearImport = () => {
 }
 
 const downloadSampleTemplate = () => {
+  const isKh = lang.value === 'kh'
   const currentYear = new Date().getFullYear()
-  const sampleHeaders = ['Student ID', 'First Name', 'Last Name', 'Gender', 'Phone', 'Exam Shift', 'Exam Day', 'Academic Year']
-  const sampleRows = [
-    sampleHeaders,
-    [`SR${currentYear}39642`, 'សុខា', 'ចាន់', 'ប្រុស', '012345678', sessionsList.value[0]?.SessionName || 'វេនទី១: ព្រឹក', examDaysList.value[0]?.name || 'Day 1', academicYearsList.value.find(y => y.isDefault)?.year || academicYearsList.value.find(y => y.isDefault)?.name || '2026-2027'],
-    [`SR${currentYear}95646`, 'ដារ៉ា', 'សុខ', 'ស្រី', '098765432', sessionsList.value[0]?.SessionName || 'វេនទី១: ព្រឹក', examDaysList.value[0]?.name || 'Day 1', academicYearsList.value.find(y => y.isDefault)?.year || academicYearsList.value.find(y => y.isDefault)?.name || '2026-2027'],
-    [`SR${currentYear}88736`, 'វណ្ណា', 'សេង', 'ប្រុស', '088123456', '', '', '']
+  const defaultSession = sessionsList.value[0]?.SessionName || (isKh ? 'វេនទី១: ព្រឹក' : 'Shift 1: Morning')
+  const defaultDay = examDaysList.value[0]?.name || 'Day 1'
+  const defaultYear = academicYearsList.value.find(y => y.isDefault)?.year || academicYearsList.value.find(y => y.isDefault)?.name || `${currentYear}-${currentYear + 1}`
+
+  const titleText = isKh ? 'គំរូនាំចូលបញ្ជីឈ្មោះបេក្ខជនប្រឡង' : 'CANDIDATE IMPORT TEMPLATE'
+  const instructionsText = isKh 
+    ? '📌 សេចក្តីណែនាំ៖ សូមកុំកែប្រែក្បាលជួរ (Header) នៅជួរទី ៣។ សូមបំពេញព័ត៌មានបេក្ខជនតាមជួរនីមួយៗចាប់ពីជួរទី ៤ ឡើងទៅ។'
+    : '📌 Instructions: Please do not modify column headers in row 3. Enter candidate records row by row starting from row 4.'
+
+  const headers = isKh
+    ? ['អត្តលេខសិស្ស', 'នាមខ្លួន', 'គោត្តនាម', 'ភេទ', 'លេខទូរស័ព្ទ', 'វេនប្រឡង', 'ថ្ងៃប្រឡង', 'ឆ្នាំសិក្សា']
+    : ['Student ID', 'First Name', 'Last Name', 'Gender', 'Phone', 'Exam Shift', 'Exam Day', 'Academic Year']
+
+  const sampleRowsData = isKh ? [
+    [`SR${currentYear}10001`, 'សុខា', 'ចាន់', 'ប្រុស', '012345678', defaultSession, defaultDay, defaultYear],
+    [`SR${currentYear}10002`, 'ដារ៉ា', 'សុខ', 'ស្រី', '098765432', defaultSession, defaultDay, defaultYear],
+    [`SR${currentYear}10003`, 'វណ្ណា', 'សេង', 'ប្រុស', '088123456', defaultSession, defaultDay, defaultYear],
+    [`SR${currentYear}10004`, 'សម្បត្តិ', 'គង់', 'ស្រី', '077998877', defaultSession, defaultDay, defaultYear],
+    [`SR${currentYear}10005`, 'រតនា', 'មាស', 'ប្រុស', '012998877', defaultSession, defaultDay, defaultYear]
+  ] : [
+    [`SR${currentYear}10001`, 'Sokha', 'Chan', 'Male', '012345678', defaultSession, defaultDay, defaultYear],
+    [`SR${currentYear}10002`, 'Dara', 'Sok', 'Female', '098765432', defaultSession, defaultDay, defaultYear],
+    [`SR${currentYear}10003`, 'Vanna', 'Seng', 'Male', '088123456', defaultSession, defaultDay, defaultYear],
+    [`SR${currentYear}10004`, 'Sambath', 'Kong', 'Female', '077998877', defaultSession, defaultDay, defaultYear],
+    [`SR${currentYear}10005`, 'Rattana', 'Meas', 'Male', '012998877', defaultSession, defaultDay, defaultYear]
   ]
-  const ws = XLSX.utils.aoa_to_sheet(sampleRows)
+
+  const wsData = [
+    [titleText],
+    [instructionsText],
+    headers,
+    ...sampleRowsData
+  ]
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+  // Merges for Title (A1:H1) and Instructions (A2:H2)
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } }
+  ]
+
+  // Row heights
+  ws['!rows'] = [
+    { hpt: 40 }, // Title row
+    { hpt: 26 }, // Instructions row
+    { hpt: 32 }, // Headers row
+    ...sampleRowsData.map(() => ({ hpt: 25 })) // Data rows
+  ]
+
+  // Column widths
   ws['!cols'] = [
-    { wch: 18 },
-    { wch: 18 },
-    { wch: 18 },
-    { wch: 12 },
-    { wch: 16 },
-    { wch: 25 },
-    { wch: 20 },
-    { wch: 18 }
+    { wch: 20 }, // Student ID
+    { wch: 18 }, // First Name
+    { wch: 18 }, // Last Name
+    { wch: 14 }, // Gender
+    { wch: 18 }, // Phone
+    { wch: 28 }, // Exam Shift
+    { wch: 18 }, // Exam Day
+    { wch: 18 }  // Academic Year
   ]
+
+  const FONT_NAME = 'Khmer OS Battambang'
+
+  // Style Title Row (A1:H1)
+  for (let c = 0; c < 8; c++) {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c })
+    if (!ws[cellRef]) ws[cellRef] = { t: 's', v: '' }
+    ws[cellRef].s = {
+      font: { name: FONT_NAME, sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '1E3A8A' } }, // Rich Navy Blue
+      alignment: { horizontal: 'center', vertical: 'center' }
+    }
+  }
+
+  // Style Instructions Row (A2:H2)
+  for (let c = 0; c < 8; c++) {
+    const cellRef = XLSX.utils.encode_cell({ r: 1, c })
+    if (!ws[cellRef]) ws[cellRef] = { t: 's', v: '' }
+    ws[cellRef].s = {
+      font: { name: FONT_NAME, sz: 9.5, italic: true, color: { rgb: '1E40AF' } },
+      fill: { fgColor: { rgb: 'EFF6FF' } }, // Soft Blue Tint
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: {
+        bottom: { style: 'thin', color: { rgb: 'BFDBFE' } }
+      }
+    }
+  }
+
+  // Style Header Row (Row index 2, A3:H3)
+  for (let c = 0; c < 8; c++) {
+    const cellRef = XLSX.utils.encode_cell({ r: 2, c })
+    if (ws[cellRef]) {
+      ws[cellRef].s = {
+        font: { name: FONT_NAME, sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '2563EB' } }, // Royal Blue
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: '93C5FD' } },
+          bottom: { style: 'medium', color: { rgb: '1D4ED8' } },
+          left: { style: 'thin', color: { rgb: '93C5FD' } },
+          right: { style: 'thin', color: { rgb: '93C5FD' } }
+        }
+      }
+    }
+  }
+
+  // Style Data Rows
+  for (let r = 3; r < wsData.length; r++) {
+    const isEven = r % 2 === 0
+    const rowBg = isEven ? 'F8FAFC' : 'FFFFFF'
+
+    for (let c = 0; c < 8; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r, c })
+      if (ws[cellRef]) {
+        // Enforce string formatting on Phone & Code
+        if (c === 0 || c === 4) {
+          ws[cellRef].t = 's'
+        }
+
+        const isCenter = (c === 0 || c === 3 || c === 4 || c === 6 || c === 7)
+        ws[cellRef].s = {
+          font: { 
+            name: FONT_NAME, 
+            sz: 10.5, 
+            color: c === 0 ? { rgb: '1D4ED8' } : { rgb: '1E293B' },
+            bold: c === 0
+          },
+          fill: { fgColor: { rgb: rowBg } },
+          alignment: { 
+            horizontal: isCenter ? 'center' : 'left', 
+            vertical: 'center' 
+          },
+          border: {
+            top: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            bottom: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            right: { style: 'thin', color: { rgb: 'E2E8F0' } }
+          }
+        }
+      }
+    }
+  }
+
+  // Enable grid lines
+  ws['!views'] = [{ showGridLines: true }]
+
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Candidates Template')
+  XLSX.utils.book_append_sheet(wb, ws, isKh ? 'គំរូនាំចូលបេក្ខជន' : 'Candidates Template')
   XLSX.writeFile(wb, 'Candidate_Import_Template.xlsx')
-  toastSuccess(lang.value === 'kh' ? 'បានទាញយកគម្រូ Excel ដោយជោគជ័យ' : 'Template downloaded successfully')
+  toastSuccess(isKh ? 'បានទាញយកគម្រូ Excel ដោយជោគជ័យ' : 'Template downloaded successfully')
 }
 
 const confirmExportExcel = () => {
@@ -1120,17 +1250,24 @@ const confirmExportExcel = () => {
     return
   }
 
+  const isKh = lang.value === 'kh'
+  const titleText = isKh ? 'បញ្ជីឈ្មោះបេក្ខជនប្រឡង' : 'CANDIDATES EXAMINATION LIST'
+  const dateFormatted = new Date().toLocaleDateString(isKh ? 'km-KH' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  const metaText = isKh 
+    ? `កាលបរិច្ឆេទនាំចេញ៖ ${dateFormatted} | ចំនួនបេក្ខជនសរុប៖ ${dataToExport.length} នាក់` 
+    : `Export Date: ${dateFormatted} | Total Candidates: ${dataToExport.length}`
+
   const headers = [
-    lang.value === 'kh' ? 'ល.រ' : 'No',
-    lang.value === 'kh' ? 'អត្តលេខសិស្ស' : 'Student ID',
-    lang.value === 'kh' ? 'គោត្តនាម' : 'Last Name',
-    lang.value === 'kh' ? 'នាមខ្លួន' : 'First Name',
-    lang.value === 'kh' ? 'ភេទ' : 'Gender',
-    lang.value === 'kh' ? 'លេខទូរស័ព្ទ' : 'Phone',
-    lang.value === 'kh' ? 'វេនប្រឡង' : 'Exam Shift',
-    lang.value === 'kh' ? 'ថ្ងៃប្រឡង' : 'Exam Day',
-    lang.value === 'kh' ? 'ឆ្នាំសិក្សា' : 'Academic Year',
-    lang.value === 'kh' ? 'ស្ថានភាពប្រឡង' : 'Exam Status'
+    isKh ? 'ល.រ' : 'No',
+    isKh ? 'អត្តលេខសិស្ស' : 'Student ID',
+    isKh ? 'គោត្តនាម' : 'Last Name',
+    isKh ? 'នាមខ្លួន' : 'First Name',
+    isKh ? 'ភេទ' : 'Gender',
+    isKh ? 'លេខទូរស័ព្ទ' : 'Phone',
+    isKh ? 'វេនប្រឡង' : 'Exam Shift',
+    isKh ? 'ថ្ងៃប្រឡង' : 'Exam Day',
+    isKh ? 'ឆ្នាំសិក្សា' : 'Academic Year',
+    isKh ? 'ស្ថានភាពប្រឡង' : 'Exam Status'
   ]
 
   const rows = dataToExport.map((s, idx) => [
@@ -1138,34 +1275,139 @@ const confirmExportExcel = () => {
     s.studentCode || ('SR' + (new Date().getFullYear()) + String(s.id).padStart(5, '0')),
     s.lastName || '',
     s.firstName || '',
-    s.gender === 'Female' ? (lang.value === 'kh' ? 'ស្រី' : 'Female') : (lang.value === 'kh' ? 'ប្រុស' : 'Male'),
+    s.gender === 'Female' ? (isKh ? 'ស្រី' : 'Female') : (isKh ? 'ប្រុស' : 'Male'),
     s.phone || '',
-    s.sessionName || (lang.value === 'kh' ? 'មិនទាន់ចាត់វេន' : 'Unassigned'),
+    s.sessionName || (isKh ? 'មិនទាន់ចាត់វេន' : 'Unassigned'),
     s.examDay || '',
     s.academicYear || s.years || '',
     getStudentExamStatusLabel(s)
   ])
 
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
-  ws['!cols'] = [
-    { wch: 6 },
-    { wch: 18 },
-    { wch: 16 },
-    { wch: 16 },
-    { wch: 10 },
-    { wch: 15 },
-    { wch: 22 },
-    { wch: 18 },
-    { wch: 16 },
-    { wch: 18 }
+  const wsData = [
+    [titleText],
+    [metaText],
+    headers,
+    ...rows
   ]
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+  // Merges for Title (A1:J1) and Meta (A2:J2)
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } }
+  ]
+
+  // Row heights
+  ws['!rows'] = [
+    { hpt: 40 }, // Title row
+    { hpt: 24 }, // Meta row
+    { hpt: 32 }, // Headers row
+    ...rows.map(() => ({ hpt: 24 }))
+  ]
+
+  // Column widths
+  ws['!cols'] = [
+    { wch: 8 },  // No
+    { wch: 18 }, // Student ID
+    { wch: 18 }, // Last Name
+    { wch: 18 }, // First Name
+    { wch: 12 }, // Gender
+    { wch: 18 }, // Phone
+    { wch: 26 }, // Exam Shift
+    { wch: 16 }, // Exam Day
+    { wch: 18 }, // Academic Year
+    { wch: 20 }  // Exam Status
+  ]
+
+  const FONT_NAME = 'Khmer OS Battambang'
+
+  // Style Title Row (A1:J1)
+  for (let c = 0; c < 10; c++) {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c })
+    if (!ws[cellRef]) ws[cellRef] = { t: 's', v: '' }
+    ws[cellRef].s = {
+      font: { name: FONT_NAME, sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '1E3A8A' } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    }
+  }
+
+  // Style Meta Row (A2:J2)
+  for (let c = 0; c < 10; c++) {
+    const cellRef = XLSX.utils.encode_cell({ r: 1, c })
+    if (!ws[cellRef]) ws[cellRef] = { t: 's', v: '' }
+    ws[cellRef].s = {
+      font: { name: FONT_NAME, sz: 9.5, italic: true, color: { rgb: '334155' } },
+      fill: { fgColor: { rgb: 'F1F5F9' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: { bottom: { style: 'thin', color: { rgb: 'CBD5E1' } } }
+    }
+  }
+
+  // Style Headers (A3:J3)
+  for (let c = 0; c < 10; c++) {
+    const cellRef = XLSX.utils.encode_cell({ r: 2, c })
+    if (ws[cellRef]) {
+      ws[cellRef].s = {
+        font: { name: FONT_NAME, sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '2563EB' } },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: '93C5FD' } },
+          bottom: { style: 'medium', color: { rgb: '1D4ED8' } },
+          left: { style: 'thin', color: { rgb: '93C5FD' } },
+          right: { style: 'thin', color: { rgb: '93C5FD' } }
+        }
+      }
+    }
+  }
+
+  // Style Data Rows
+  for (let r = 3; r < wsData.length; r++) {
+    const isEven = r % 2 === 0
+    const rowBg = isEven ? 'F8FAFC' : 'FFFFFF'
+
+    for (let c = 0; c < 10; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r, c })
+      if (ws[cellRef]) {
+        if (c === 1 || c === 5) {
+          ws[cellRef].t = 's'
+        }
+
+        const isCenter = (c === 0 || c === 1 || c === 4 || c === 5 || c === 7 || c === 8 || c === 9)
+        ws[cellRef].s = {
+          font: { 
+            name: FONT_NAME, 
+            sz: 10.5, 
+            color: c === 1 ? { rgb: '1D4ED8' } : { rgb: '1E293B' },
+            bold: c === 1
+          },
+          fill: { fgColor: { rgb: rowBg } },
+          alignment: { 
+            horizontal: isCenter ? 'center' : 'left', 
+            vertical: 'center' 
+          },
+          border: {
+            top: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            bottom: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            right: { style: 'thin', color: { rgb: 'E2E8F0' } }
+          }
+        }
+      }
+    }
+  }
+
+  ws['!views'] = [{ showGridLines: true }]
+
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Candidates')
+  XLSX.utils.book_append_sheet(wb, ws, isKh ? 'បញ្ជីបេក្ខជន' : 'Candidates')
   const dateStr = new Date().toISOString().slice(0, 10)
   const yearSuffix = exportYear.value ? `_${exportYear.value.replace(/[^a-zA-Z0-9_-]/g, '_')}` : ''
   XLSX.writeFile(wb, `Candidates_List${yearSuffix}_${dateStr}.xlsx`)
   showExportModal.value = false
-  toastSuccess(lang.value === 'kh' ? 'បាននាំចេញបញ្ជីបេក្ខជនជា Excel ដោយជោគជ័យ!' : 'Exported candidates to Excel successfully!')
+  toastSuccess(isKh ? 'បាននាំចេញបញ្ជីបេក្ខជនជា Excel ដោយជោគជ័យ!' : 'Exported candidates to Excel successfully!')
 }
 
 const exportStudentsToExcel = openExportModal
@@ -1190,7 +1432,23 @@ const handleExcelFileUpload = (e) => {
         return
       }
 
-      const header = rows[0].map(h => String(h || '').trim().toLowerCase())
+      // Dynamically locate the header row index (within first 10 rows)
+      let headerRowIdx = -1
+      for (let r = 0; r < Math.min(rows.length, 10); r++) {
+        const rowItems = (rows[r] || []).map(h => String(h || '').trim().toLowerCase())
+        const rowStr = rowItems.join(' ')
+        if ((rowStr.includes('first') || rowStr.includes('នាមខ្លួន') || rowStr.includes('ឈ្មោះ') || rowStr.includes('fname')) &&
+            (rowStr.includes('last') || rowStr.includes('គោត្តនាម') || rowStr.includes('lname') || rowStr.includes('gender') || rowStr.includes('ភេទ') || rowStr.includes('id') || rowStr.includes('អត្តលេខ'))) {
+          headerRowIdx = r
+          break
+        }
+      }
+
+      if (headerRowIdx === -1) {
+        headerRowIdx = 0
+      }
+
+      const header = (rows[headerRowIdx] || []).map(h => String(h || '').trim().toLowerCase())
       
       const idIdx = header.findIndex(h => h.includes('id') || h.includes('code') || h.includes('អត្តលេខ'))
       const firstIdx = header.findIndex(h => h.includes('first') || h.includes('នាមខ្លួន') || h.includes('ឈ្មោះ') || h === 'fname')
@@ -1202,18 +1460,18 @@ const handleExcelFileUpload = (e) => {
       const yearIdx = header.findIndex(h => h.includes('year') || h.includes('ឆ្នាំ'))
 
       const candidates = []
-      for (let i = 1; i < rows.length; i++) {
+      for (let i = headerRowIdx + 1; i < rows.length; i++) {
         const row = rows[i]
         if (!row || !row.length) continue
 
-        let studentCode = idIdx !== -1 ? String(row[idIdx] || '').trim() : ''
-        let firstName = firstIdx !== -1 ? String(row[firstIdx] || '').trim() : ''
-        let lastName = lastIdx !== -1 ? String(row[lastIdx] || '').trim() : ''
-        let gender = genderIdx !== -1 ? String(row[genderIdx] || '').trim() : 'Male'
-        let phone = phoneIdx !== -1 ? String(row[phoneIdx] || '').trim() : ''
-        let sessionName = shiftIdx !== -1 ? String(row[shiftIdx] || '').trim() : ''
-        let examDay = dayIdx !== -1 ? String(row[dayIdx] || '').trim() : ''
-        let academicYear = yearIdx !== -1 ? String(row[yearIdx] || '').trim() : ''
+        let studentCode = idIdx !== -1 ? String(row[idIdx] ?? '').trim() : ''
+        let firstName = firstIdx !== -1 ? String(row[firstIdx] ?? '').trim() : ''
+        let lastName = lastIdx !== -1 ? String(row[lastIdx] ?? '').trim() : ''
+        let genderRaw = genderIdx !== -1 ? String(row[genderIdx] ?? '').trim() : 'Male'
+        let phone = phoneIdx !== -1 ? String(row[phoneIdx] ?? '').trim() : ''
+        let sessionName = shiftIdx !== -1 ? String(row[shiftIdx] ?? '').trim() : ''
+        let examDay = dayIdx !== -1 ? String(row[dayIdx] ?? '').trim() : ''
+        let academicYear = yearIdx !== -1 ? String(row[yearIdx] ?? '').trim() : ''
 
         if (firstIdx === -1 && row[1]) firstName = String(row[1]).trim()
         if (lastIdx === -1 && row[2]) lastName = String(row[2]).trim()
@@ -1221,11 +1479,24 @@ const handleExcelFileUpload = (e) => {
 
         if (!firstName && !lastName) continue
 
+        // Normalize gender
+        let gender = 'Male'
+        if (genderRaw.includes('ស្រី') || genderRaw.toLowerCase() === 'female' || genderRaw.toLowerCase() === 'f') {
+          gender = 'Female'
+        } else if (genderRaw.includes('ប្រុស') || genderRaw.toLowerCase() === 'male' || genderRaw.toLowerCase() === 'm') {
+          gender = 'Male'
+        }
+
+        // Format Cambodian phone number leading 0 if dropped by Excel
+        if (phone && /^\d{8,9}$/.test(phone) && !phone.startsWith('0')) {
+          phone = '0' + phone
+        }
+
         candidates.push({
           studentCode,
           firstName,
           lastName,
-          gender: gender || 'Male',
+          gender,
           phone,
           sessionName,
           examDay,
