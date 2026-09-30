@@ -16,6 +16,10 @@ class StudentSubmission extends Model
         'CompletedAt',
         'TotalCorrect',
         'Score',
+        'TotalMarks',
+        'TotalQuestions',
+        'QuestionLimit',
+        'PassScore',
         'Interruptions',
         'AssignedQuestionIds',
     ];
@@ -24,6 +28,10 @@ class StudentSubmission extends Model
         'StartedAt'           => 'datetime',
         'CompletedAt'         => 'datetime',
         'Score'               => 'decimal:2',
+        'TotalMarks'          => 'decimal:2',
+        'TotalQuestions'      => 'integer',
+        'QuestionLimit'       => 'integer',
+        'PassScore'           => 'integer',
         'Interruptions'       => 'integer',
         'AssignedQuestionIds' => 'array',
     ];

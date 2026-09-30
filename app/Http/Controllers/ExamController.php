@@ -120,10 +120,20 @@ class ExamController extends Controller
                 $nonExamples = $nonExamples->take($limit)->values();
             }
 
-            $rawQuestions = $examples->concat($nonExamples)->values();
-
-            // Lock assigned question IDs for this attempt
+            // Lock assigned question IDs and snapshot exam settings for this attempt
             $submission->AssignedQuestionIds = $rawQuestions->pluck('QuestionId')->toArray();
+            $submission->TotalQuestions = $rawQuestions->count();
+            $submission->QuestionLimit = $limit > 0 ? $limit : null;
+            $submission->PassScore = $test ? ($test->PassScore ?? 50) : 50;
+
+            $sumActivePts = (float) $rawQuestions->sum('Points');
+            $testTotalMarks = $test ? (float) ($test->TotalMarks ?: 100.0) : 100.0;
+            $bankCount = $test ? $test->questions()->count() : 0;
+            if ($limit > 0 && $bankCount > 0 && $limit < $bankCount) {
+                $submission->TotalMarks = $sumActivePts > 0 ? $sumActivePts : round(($limit / $bankCount) * $testTotalMarks, 2);
+            } else {
+                $submission->TotalMarks = $sumActivePts > 0 ? $sumActivePts : $testTotalMarks;
+            }
             $submission->save();
         }
 
@@ -441,6 +451,14 @@ class ExamController extends Controller
 
             $submission->TotalCorrect = $totalCorrect;
             $submission->Score = $score;
+            $submission->TotalMarks = $totalMarks;
+            $submission->TotalQuestions = $totalQuestions;
+            if ($test && $test->QuestionLimit) {
+                $submission->QuestionLimit = (int)$test->QuestionLimit;
+            }
+            if ($test && $test->PassScore) {
+                $submission->PassScore = (int)$test->PassScore;
+            }
             $submission->CompletedAt = now();
             $submission->Interruptions = $interruptions;
             $submission->save();

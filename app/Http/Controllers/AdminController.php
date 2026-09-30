@@ -1306,6 +1306,10 @@ class AdminController extends Controller
                 't.TotalMarks as totalMarks',
                 't.PassScore as passScore',
                 't.QuestionLimit as questionLimit',
+                'ss.TotalMarks as submissionTotalMarks',
+                'ss.TotalQuestions as submissionTotalQuestions',
+                'ss.QuestionLimit as submissionQuestionLimit',
+                'ss.PassScore as submissionPassScore',
                 'ss.AssignedQuestionIds as assignedQuestionIds',
                 'ss.TotalCorrect as totalCorrect',
                 'ss.Score as score',
@@ -1331,26 +1335,48 @@ class AdminController extends Controller
 
                 $totalBankQuestions = (int) ($r->totalBankQuestions ?? 0);
                 $totalBankPoints = (float) ($r->totalBankPoints ?: ($r->totalMarks ?: 100));
-                $qLimit = ($r->questionLimit && (int)$r->questionLimit > 0) ? (int)$r->questionLimit : null;
 
-                $actualQuestions = (is_array($assignedIds) && count($assignedIds) > 0)
-                    ? count($assignedIds)
-                    : (($qLimit && $totalBankQuestions > 0 && $qLimit < $totalBankQuestions) ? $qLimit : $totalBankQuestions);
-
-                if ($qLimit && $totalBankQuestions > 0 && $qLimit < $totalBankQuestions) {
-                    $effectiveTotalMarks = round(($qLimit / $totalBankQuestions) * $totalBankPoints);
-                    if ($effectiveTotalMarks <= 0) {
-                        $effectiveTotalMarks = (float) $qLimit;
-                    }
+                // 1. Determine actual questions for this submission attempt
+                if ($r->submissionTotalQuestions !== null && (int)$r->submissionTotalQuestions > 0) {
+                    $actualQuestions = (int) $r->submissionTotalQuestions;
+                } elseif (is_array($assignedIds) && count($assignedIds) > 0) {
+                    $actualQuestions = count($assignedIds);
                 } else {
-                    $effectiveTotalMarks = (float) ($r->totalMarks ?: $totalBankPoints);
+                    $qLimit = ($r->questionLimit && (int)$r->questionLimit > 0) ? (int)$r->questionLimit : null;
+                    $actualQuestions = ($qLimit && $totalBankQuestions > 0 && $qLimit < $totalBankQuestions) ? $qLimit : $totalBankQuestions;
+                }
+
+                // 2. Determine effective total marks for this submission attempt
+                if ($r->submissionTotalMarks !== null && (float)$r->submissionTotalMarks > 0) {
+                    $effectiveTotalMarks = (float) $r->submissionTotalMarks;
+                } elseif (is_array($assignedIds) && count($assignedIds) > 0) {
+                    $assignedPts = (float) DB::table('tblquestion')->whereIn('QuestionId', $assignedIds)->sum('Points');
+                    $effectiveTotalMarks = $assignedPts > 0 ? $assignedPts : (float) count($assignedIds);
+                } else {
+                    $qLimit = ($r->questionLimit && (int)$r->questionLimit > 0) ? (int)$r->questionLimit : null;
+                    if ($qLimit && $totalBankQuestions > 0 && $qLimit < $totalBankQuestions) {
+                        $effectiveTotalMarks = round(($qLimit / $totalBankQuestions) * $totalBankPoints);
+                        if ($effectiveTotalMarks <= 0) {
+                            $effectiveTotalMarks = (float) $qLimit;
+                        }
+                    } else {
+                        $rawScoreCheck = (float) ($r->score ?? 0);
+                        if ($rawScoreCheck > (float)($r->totalMarks ?: 0) && $totalBankPoints >= $rawScoreCheck) {
+                            $effectiveTotalMarks = $totalBankPoints;
+                            if ($actualQuestions < $totalBankQuestions) {
+                                $actualQuestions = $totalBankQuestions;
+                            }
+                        } else {
+                            $effectiveTotalMarks = (float) ($r->totalMarks ?: $totalBankPoints);
+                        }
+                    }
                 }
 
                 $totalCorrect = (int) ($r->totalCorrect ?? 0);
                 $rawScore = (float) ($r->score ?? 0);
 
                 if ($actualQuestions > 0) {
-                    if ($rawScore > $effectiveTotalMarks || ($qLimit && $totalBankQuestions > 0 && $qLimit < $totalBankQuestions)) {
+                    if ($rawScore > $effectiveTotalMarks) {
                         $score = round(($totalCorrect / $actualQuestions) * $effectiveTotalMarks, 2);
                     } else {
                         $score = $rawScore;
@@ -1360,8 +1386,12 @@ class AdminController extends Controller
                 }
 
                 $accuracy = $actualQuestions > 0
-                    ? round(($totalCorrect / $actualQuestions) * 100, 1)
-                    : ($effectiveTotalMarks > 0 ? round(($score / $effectiveTotalMarks) * 100, 1) : 0);
+                    ? min(100.0, round(($totalCorrect / $actualQuestions) * 100, 1))
+                    : ($effectiveTotalMarks > 0 ? min(100.0, round(($score / $effectiveTotalMarks) * 100, 1)) : 0);
+
+                $effectivePassScore = ($r->submissionPassScore !== null && (int)$r->submissionPassScore > 0)
+                    ? (int)$r->submissionPassScore
+                    : ((int)($r->passScore ?? 50));
 
                 $dateObj = !empty($r->examDate) ? \Carbon\Carbon::parse($r->examDate) : (!empty($r->completedAt) ? \Carbon\Carbon::parse($r->completedAt) : (!empty($r->startedAt) ? \Carbon\Carbon::parse($r->startedAt) : now()));
                 
@@ -1388,6 +1418,7 @@ class AdminController extends Controller
                     'sessionName' => $r->sessionName ?: 'គ្រប់វេនទាំងអស់ (General Shift)',
                     'groupName' => $r->sessionName ?? 'General Shift',
                     'skillName' => $r->sessionName ?? 'Scholarship Exam',
+                    'passScore' => $effectivePassScore,
                 ]);
             });
 

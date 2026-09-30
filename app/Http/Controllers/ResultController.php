@@ -38,7 +38,7 @@ class ResultController extends Controller
                 't.TestName as testName',
                 't.AcademicYear as academicYear',
                 't.ExamDay as examDay',
-                't.TotalMarks as totalMarks',
+                DB::raw('COALESCE(ss.TotalMarks, t.TotalMarks) as totalMarks'),
                 't.DurationMinutes as durationMinutes',
                 'ss.StartedAt as startedAt',
                 'ss.CompletedAt as completedAt',
@@ -136,21 +136,30 @@ class ResultController extends Controller
 
         $incorrect = max(0, $totalQuestions - $correct);
 
-        $testTotalMarks = (float) ($test?->TotalMarks ?: 100);
-        $sumActivePts = (float) $allQuestions->sum('Points');
-
-        if ($test && $test->QuestionLimit && (int)$test->QuestionLimit > 0 && $bankCount > 0 && (int)$test->QuestionLimit < $bankCount) {
-            $effectiveTotalMarks = $sumActivePts > 0 ? $sumActivePts : round(((int)$test->QuestionLimit / $bankCount) * $testTotalMarks, 2);
+        if ($submission->TotalMarks !== null && (float)$submission->TotalMarks > 0) {
+            $effectiveTotalMarks = (float) $submission->TotalMarks;
         } else {
-            $effectiveTotalMarks = $sumActivePts > 0 ? $sumActivePts : $testTotalMarks;
+            $testTotalMarks = (float) ($test?->TotalMarks ?: 100);
+            $sumActivePts = (float) $allQuestions->sum('Points');
+            $bankCount = $test ? $test->questions()->count() : 0;
+
+            if ($test && $test->QuestionLimit && (int)$test->QuestionLimit > 0 && $bankCount > 0 && (int)$test->QuestionLimit < $bankCount) {
+                $effectiveTotalMarks = $sumActivePts > 0 ? $sumActivePts : round(((int)$test->QuestionLimit / $bankCount) * $testTotalMarks, 2);
+            } else {
+                $effectiveTotalMarks = $sumActivePts > 0 ? $sumActivePts : $testTotalMarks;
+            }
         }
 
         $rawScore = (float) ($submission->Score ?? 0);
-        if ($totalQuestions > 0 && ($rawScore > $effectiveTotalMarks || ($test && $test->QuestionLimit && (int)$test->QuestionLimit < $bankCount))) {
+        if ($totalQuestions > 0 && $rawScore > $effectiveTotalMarks) {
             $score = round(($correct / $totalQuestions) * $effectiveTotalMarks, 2);
         } else {
             $score = $rawScore;
         }
+
+        $accuracy = $totalQuestions > 0
+            ? min(100.0, round(($correct / $totalQuestions) * 100, 1))
+            : 0;
 
         return response()->json([
             'submissionId'   => $submission->SubmissionId,
