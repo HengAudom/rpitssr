@@ -87,16 +87,44 @@ class ExamController extends Controller
 
         // Build questions payload WITHOUT IsCorrect (except defaultAnswerId for example questions)
         $rawQuestions = $test->questions;
-        if ((bool)$test->RandomizeQuestions) {
-            $examples = $rawQuestions->filter(fn($q) => (bool)($q->IsExample || preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($q->QuestionText))));
-            $seed = (int)($submission?->SubmissionId ?? $student->StudentId);
-            mt_srand($seed);
-            $nonExamples = $rawQuestions->reject(fn($q) => (bool)($q->IsExample || preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($q->QuestionText))))
-                ->values()
-                ->sortBy(function () {
+
+        // Check if submission already has locked assigned questions
+        $existingAssignedIds = $submission->AssignedQuestionIds ? (is_array($submission->AssignedQuestionIds) ? $submission->AssignedQuestionIds : json_decode($submission->AssignedQuestionIds, true)) : null;
+
+        if (!empty($existingAssignedIds) && is_array($existingAssignedIds)) {
+            $questionMap = $rawQuestions->keyBy('QuestionId');
+            $orderedQuestions = collect();
+            foreach ($existingAssignedIds as $qId) {
+                if (isset($questionMap[$qId])) {
+                    $orderedQuestions->push($questionMap[$qId]);
+                }
+            }
+            if ($orderedQuestions->isNotEmpty()) {
+                $rawQuestions = $orderedQuestions;
+            }
+        } else {
+            $examples = $rawQuestions->filter(fn($q) => (bool)($q->IsExample || preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($q->QuestionText))))->values();
+            $nonExamples = $rawQuestions->reject(fn($q) => (bool)($q->IsExample || preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($q->QuestionText))))->values();
+
+            if ((bool)$test->RandomizeQuestions) {
+                $seed = (int)($submission?->SubmissionId ?? $student->StudentId);
+                mt_srand($seed);
+                $nonExamples = $nonExamples->sortBy(function () {
                     return mt_rand();
-                });
-            $rawQuestions = $examples->concat($nonExamples);
+                })->values();
+            }
+
+            // Apply QuestionLimit (e.g. sample 50 questions out of 100)
+            $limit = (int)($test->QuestionLimit ?? 0);
+            if ($limit > 0 && $limit < $nonExamples->count()) {
+                $nonExamples = $nonExamples->take($limit)->values();
+            }
+
+            $rawQuestions = $examples->concat($nonExamples)->values();
+
+            // Lock assigned question IDs for this attempt
+            $submission->AssignedQuestionIds = $rawQuestions->pluck('QuestionId')->toArray();
+            $submission->save();
         }
 
         $questions = $rawQuestions->map(function ($question) use ($submission, $test, $student) {
@@ -182,6 +210,7 @@ class ExamController extends Controller
             'durationMinutes' => $durationMin,
             'totalMarks' => $test->TotalMarks,
             'passScore' => $test->PassScore ?? 50,
+            'questionLimit' => $test->QuestionLimit ? (int)$test->QuestionLimit : null,
             'randomizeQuestions' => (bool)$test->RandomizeQuestions,
             'randomizeAnswers' => (bool)$test->RandomizeAnswers,
             'scheduledAt' => $test->ScheduledAt,
@@ -363,7 +392,16 @@ class ExamController extends Controller
             }
 
             $test = Test::find($submission->TestId);
-            $totalQuestions = Question::where('TestId', $submission->TestId)->count();
+            $assignedIds = !empty($submission->AssignedQuestionIds) ? (is_array($submission->AssignedQuestionIds) ? $submission->AssignedQuestionIds : json_decode($submission->AssignedQuestionIds, true)) : null;
+
+            if (is_array($assignedIds) && count($assignedIds) > 0) {
+                $totalQuestions = count($assignedIds);
+            } else {
+                $totalQuestions = Question::where('TestId', $submission->TestId)->count();
+                if ($test && $test->QuestionLimit && (int)$test->QuestionLimit > 0 && (int)$test->QuestionLimit < $totalQuestions) {
+                    $totalQuestions = (int)$test->QuestionLimit;
+                }
+            }
             $answeredCount = SubmissionDetail::where('SubmissionId', $submissionId)
                 ->whereNotNull('SelectedAnswerId')
                 ->count();

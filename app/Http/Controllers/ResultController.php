@@ -77,6 +77,25 @@ class ResultController extends Controller
 
         $test = $submission->test;
         $allQuestions = $test ? $test->questions : collect();
+
+        // If this submission had locked assigned questions (e.g. 50 out of 100)
+        $assignedIds = !empty($submission->AssignedQuestionIds)
+            ? (is_array($submission->AssignedQuestionIds) ? $submission->AssignedQuestionIds : json_decode($submission->AssignedQuestionIds, true))
+            : null;
+
+        if (!empty($assignedIds) && is_array($assignedIds)) {
+            $questionMap = $allQuestions->keyBy('QuestionId');
+            $ordered = collect();
+            foreach ($assignedIds as $qId) {
+                if (isset($questionMap[$qId])) {
+                    $ordered->push($questionMap[$qId]);
+                }
+            }
+            if ($ordered->isNotEmpty()) {
+                $allQuestions = $ordered;
+            }
+        }
+
         $totalQuestions = $allQuestions->count();
         $correct = $submission->TotalCorrect ?? 0;
         

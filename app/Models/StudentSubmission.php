@@ -17,13 +17,15 @@ class StudentSubmission extends Model
         'TotalCorrect',
         'Score',
         'Interruptions',
+        'AssignedQuestionIds',
     ];
 
     protected $casts = [
-        'StartedAt'     => 'datetime',
-        'CompletedAt'   => 'datetime',
-        'Score'         => 'decimal:2',
-        'Interruptions' => 'integer',
+        'StartedAt'           => 'datetime',
+        'CompletedAt'         => 'datetime',
+        'Score'               => 'decimal:2',
+        'Interruptions'       => 'integer',
+        'AssignedQuestionIds' => 'array',
     ];
 
     public function student()

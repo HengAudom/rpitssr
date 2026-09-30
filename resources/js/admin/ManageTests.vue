@@ -100,7 +100,15 @@
               <tr v-for="test in paginatedTests" :key="test.id" class="hover:bg-slate-50/80 transition-colors">
                 <td class="px-4 py-3.5 font-bold text-slate-900 leading-snug">
                   <div>{{ test.name }}</div>
-                  <div v-if="test.randomizeQuestions || test.randomizeAnswers" class="flex items-center gap-1.5 flex-wrap mt-1">
+                  <div v-if="test.randomizeQuestions || test.randomizeAnswers || test.questionLimit" class="flex items-center gap-1.5 flex-wrap mt-1">
+                    <span
+                      v-if="test.questionLimit"
+                      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60"
+                      :title="lang === 'kh' ? `កំណត់ ${test.questionLimit} សំណួរ` : `Limit ${test.questionLimit} questions`"
+                    >
+                      <span class="material-symbols-outlined text-[11px] text-amber-600">filter_list</span>
+                      {{ lang === 'kh' ? `យក ${test.questionLimit} សំណួរ` : `${test.questionLimit} Qs` }}
+                    </span>
                     <span
                       v-if="test.randomizeQuestions"
                       class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60"
@@ -159,7 +167,13 @@
                   {{ test.durationMinutes }} {{ lang === 'kh' ? 'នាទី' : 'mins' }}
                 </td>
                 <td class="px-4 py-3.5 text-slate-600 whitespace-nowrap">
-                  <span class="font-bold text-slate-800">{{ (test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0 }}</span> {{ lang === 'kh' ? 'សំណួរ' : 'qs' }}
+                  <template v-if="test.questionLimit && test.questionLimit < ((test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0)">
+                    <span class="font-bold text-amber-700">{{ test.questionLimit }}</span>
+                    <span class="text-slate-400 font-normal">/{{ (test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0 }}</span> {{ lang === 'kh' ? 'សំណួរ' : 'qs' }}
+                  </template>
+                  <template v-else>
+                    <span class="font-bold text-slate-800">{{ (test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0 }}</span> {{ lang === 'kh' ? 'សំណួរ' : 'qs' }}
+                  </template>
                   <span class="text-slate-300 mx-1">·</span>
                   <span class="font-bold text-blue-600">{{ test.totalMarks }}</span> {{ lang === 'kh' ? 'ពិន្ទុ' : 'pts' }}
                 </td>
@@ -244,7 +258,14 @@
                 <h4 class="font-bold text-slate-900 text-sm leading-snug break-words">
                   {{ test.name }}
                 </h4>
-                <div v-if="test.randomizeQuestions || test.randomizeAnswers" class="flex items-center gap-1.5 flex-wrap mt-1">
+                <div v-if="test.randomizeQuestions || test.randomizeAnswers || test.questionLimit" class="flex items-center gap-1.5 flex-wrap mt-1">
+                  <span
+                    v-if="test.questionLimit"
+                    class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60"
+                  >
+                    <span class="material-symbols-outlined text-[11px] text-amber-600">filter_list</span>
+                    {{ lang === 'kh' ? `យក ${test.questionLimit} សំណួរ` : `${test.questionLimit} Qs` }}
+                  </span>
                   <span
                     v-if="test.randomizeQuestions"
                     class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60"
@@ -304,7 +325,13 @@
                 <span>{{ test.durationMinutes }} {{ lang === 'kh' ? 'នាទី' : 'mins' }}</span>
               </div>
               <div class="flex items-center gap-1.5">
-                <span class="font-bold text-slate-800">{{ (test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0 }}</span> {{ lang === 'kh' ? 'សំណួរ' : 'qs' }}
+                <template v-if="test.questionLimit && test.questionLimit < ((test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0)">
+                  <span class="font-bold text-amber-700">{{ test.questionLimit }}</span>
+                  <span class="text-slate-400 font-normal">/{{ (test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0 }}</span> {{ lang === 'kh' ? 'សំណួរ' : 'qs' }}
+                </template>
+                <template v-else>
+                  <span class="font-bold text-slate-800">{{ (test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0 }}</span> {{ lang === 'kh' ? 'សំណួរ' : 'qs' }}
+                </template>
                 <span class="text-slate-300">·</span>
                 <span class="font-bold text-blue-600">{{ test.totalMarks }}</span> {{ lang === 'kh' ? 'ពិន្ទុ' : 'pts' }}
               </div>
@@ -937,8 +964,8 @@
               </div>
             </div>
 
-            <!-- Pass Score -->
-            <div>
+            <!-- Pass Score & Question Limit -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <Input
                 v-model.number="passScore"
                 type="number"
@@ -946,6 +973,25 @@
                 :label="lang === 'kh' ? 'ពិន្ទុជាប់' : 'Pass Score'"
                 placeholder="50"
               />
+              <Input
+                v-model.number="questionLimit"
+                type="number"
+                min="1"
+                :max="questions.length || undefined"
+                :label="lang === 'kh' ? 'កំណត់ចំនួនសំណួរប្រឡង' : 'Questions to Display'"
+                :placeholder="lang === 'kh' ? 'ទាំងអស់ (ឧ. ៥០)' : 'All (e.g. 50)'"
+              />
+            </div>
+
+            <!-- Question Limit Info banner -->
+            <div v-if="questionLimit && questionLimit < questions.length" class="p-2 rounded-xl bg-amber-50/80 border border-amber-200/80 text-[11px] text-amber-800 flex items-start gap-1.5">
+              <span class="material-symbols-outlined text-sm text-amber-600 shrink-0 mt-0.5">info</span>
+              <span>
+                {{ lang === 'kh' 
+                  ? `វិញ្ញាសានឹងបង្ហាញតែ ${questionLimit} សំណួរ ${randomizeQuestions ? '(ចាប់យកចៃដន្យ)' : '(តាមលំដាប់)'} ចេញពីសំណួរសរុប ${questions.length} ក្នុងធនាគារ។` 
+                  : `Exam will show only ${questionLimit} questions ${randomizeQuestions ? '(randomly selected)' : '(in order)'} out of ${questions.length} in the bank.` 
+                }}
+              </span>
             </div>
 
             <!-- Randomize Questions & Randomize Answers Switches -->
@@ -980,8 +1026,12 @@
             <!-- Summary Box -->
             <div class="p-2.5 rounded-2xl bg-blue-50/70 border border-blue-100 space-y-1 text-xs">
               <div class="flex items-center justify-between">
-                <span class="text-slate-600">{{ t.totalQuestions }}:</span>
+                <span class="text-slate-600">{{ lang === 'kh' ? 'សំណួរក្នុងធនាគារ' : 'Questions in Bank' }}:</span>
                 <strong class="text-slate-900 font-bold text-xs">{{ questions.length }}</strong>
+              </div>
+              <div v-if="questionLimit && questionLimit < questions.length" class="flex items-center justify-between">
+                <span class="text-slate-600">{{ lang === 'kh' ? 'សំណួរប្រឡងជាក់ស្តែង' : 'Active Exam Questions' }}:</span>
+                <strong class="text-amber-700 font-bold text-xs">{{ questionLimit }} / {{ questions.length }}</strong>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-slate-600">{{ t.totalScore }}:</span>
@@ -1501,6 +1551,7 @@ const selectedAcademicYear = ref('')
 const durationMinutes = ref(45)
 const totalMarks = ref(0)
 const passScore = ref(50)
+const questionLimit = ref(null)
 const randomizeQuestions = ref(false)
 const randomizeAnswers = ref(false)
 const scheduledAt = ref('')
@@ -1853,6 +1904,7 @@ const openCreateBuilder = async () => {
   durationMinutes.value = 45
   totalMarks.value = 1
   passScore.value = 50
+  questionLimit.value = null
   randomizeQuestions.value = false
   randomizeAnswers.value = false
   scheduledAt.value = ''
@@ -1881,6 +1933,7 @@ const editTest = async (test) => {
     durationMinutes.value = tData.durationMinutes
     totalMarks.value = tData.totalMarks
     passScore.value = tData.passScore ?? 50
+    questionLimit.value = tData.questionLimit ? Number(tData.questionLimit) : null
     randomizeQuestions.value = Boolean(tData.randomizeQuestions)
     randomizeAnswers.value = Boolean(tData.randomizeAnswers)
     scheduledAt.value = tData.scheduledAt ? tData.scheduledAt.replace(' ', 'T').substring(0, 16) : ''
@@ -2006,6 +2059,7 @@ const handleSaveTest = async (status = 'Published') => {
       durationMinutes: durationMinutes.value,
       totalMarks: calculatedTotalMarks.value || 1,
       passScore: passScore.value != null ? Number(passScore.value) : 50,
+      questionLimit: questionLimit.value ? parseInt(questionLimit.value) : null,
       randomizeQuestions: Boolean(randomizeQuestions.value),
       randomizeAnswers: Boolean(randomizeAnswers.value),
       scheduledAt: scheduledAt.value ? scheduledAt.value.replace('T', ' ') + ':00' : null,
@@ -2137,6 +2191,7 @@ const exportTestToExcel = async (test) => {
       [isKh ? 'រយៈពេល៖' : 'Duration:', isKh ? `${tData.durationMinutes || 0} នាទី` : `${tData.durationMinutes || 0} mins`],
       [isKh ? 'ពិន្ទុសរុប៖' : 'Total Marks:', isKh ? `${tData.totalMarks || 0} ពិន្ទុ` : `${tData.totalMarks || 0} pts`],
       [isKh ? 'ពិន្ទុជាប់៖' : 'Pass Score:', `${tData.passScore ?? 50}%`],
+      [isKh ? 'កំណត់ចំនួនសំណួរ៖' : 'Question Limit:', tData.questionLimit ? (isKh ? `${tData.questionLimit} សំណួរ` : `${tData.questionLimit} questions`) : (isKh ? 'ទាំងអស់' : 'All')],
       [isKh ? 'សំណួរចៃដន្យ៖' : 'Randomize Questions:', tData.randomizeQuestions ? (isKh ? 'បើក' : 'Yes') : (isKh ? 'បិទ' : 'No')],
       [isKh ? 'ចម្លើយចៃដន្យ៖' : 'Randomize Answers:', tData.randomizeAnswers ? (isKh ? 'បើក' : 'Yes') : (isKh ? 'បិទ' : 'No')],
       [],

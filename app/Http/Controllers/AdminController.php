@@ -1745,6 +1745,8 @@ class AdminController extends Controller
                 't.TestName as testName',
                 't.DurationMinutes as durationMinutes',
                 't.TotalMarks as totalMarks',
+                't.QuestionLimit as questionLimit',
+                'ss.AssignedQuestionIds as assignedQuestionIds',
                 'ss.Score as score',
                 'ss.StartedAt as startedAt',
                 'ss.CompletedAt as completedAt',
@@ -1774,7 +1776,11 @@ class AdminController extends Controller
                 ->map(function ($r) {
                     $studentName = trim($r->firstName . ' ' . $r->lastName);
                     $isCompleted = !empty($r->completedAt);
-                    $progress = $r->totalQuestions > 0 ? round(($r->answeredCount / $r->totalQuestions) * 100) : 0;
+                    $assignedIds = !empty($r->assignedQuestionIds) ? (is_array($r->assignedQuestionIds) ? $r->assignedQuestionIds : json_decode($r->assignedQuestionIds, true)) : null;
+                    $actualTotalQuestions = (is_array($assignedIds) && count($assignedIds) > 0)
+                        ? count($assignedIds)
+                        : (($r->questionLimit && (int)$r->questionLimit > 0 && (int)$r->questionLimit < (int)$r->totalQuestions) ? (int)$r->questionLimit : (int)$r->totalQuestions);
+                    $progress = $actualTotalQuestions > 0 ? min(100, round(($r->answeredCount / $actualTotalQuestions) * 100)) : 0;
                     
                     $started = $r->startedAt ? \Carbon\Carbon::parse($r->startedAt) : now();
                     $endedTimestamp = $r->completedAt ? \Carbon\Carbon::parse($r->completedAt)->getTimestamp() : now()->getTimestamp();
@@ -1796,7 +1802,7 @@ class AdminController extends Controller
                         'durationMinutes' => $r->durationMinutes,
                         'totalMarks' => $r->totalMarks,
                         'score' => $r->score,
-                        'totalQuestions' => (int) $r->totalQuestions,
+                        'totalQuestions' => (int) $actualTotalQuestions,
                         'answeredCount' => (int) $r->answeredCount,
                         'progress' => $progress,
                         'interruptions' => (int) ($r->interruptions ?? 0),

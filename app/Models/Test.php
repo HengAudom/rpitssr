@@ -16,6 +16,7 @@ class Test extends Model
         'DurationMinutes',
         'TotalMarks',
         'PassScore',
+        'QuestionLimit',
         'RandomizeQuestions',
         'RandomizeAnswers',
         'ExamDay',
@@ -28,6 +29,7 @@ class Test extends Model
     protected $casts = [
         'ScheduledAt' => 'datetime',
         'FinishedAt' => 'datetime',
+        'QuestionLimit' => 'integer',
         'RandomizeQuestions' => 'boolean',
         'RandomizeAnswers' => 'boolean',
     ];
