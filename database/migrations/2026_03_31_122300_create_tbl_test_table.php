@@ -22,7 +22,9 @@ return new class extends Migration
                 $table->integer('DurationMinutes');
                 $table->integer('TotalMarks');
                 $table->integer('PassScore')->default(50)->nullable();
+                $table->unsignedInteger('QuestionLimit')->nullable();
                 $table->boolean('RandomizeQuestions')->default(false);
+                $table->boolean('RandomizeAnswers')->default(false);
                 $table->timestamp('ScheduledAt')->nullable();
                 $table->timestamp('FinishedAt')->nullable();
                 $table->enum('Status', ['Draft', 'Published'])->default('Draft');
@@ -30,6 +32,16 @@ return new class extends Migration
 
                 $table->foreign('SessionId')->references('SessionId')->on('tblexamsession')->onDelete('set null');
                 $table->foreign('CreatedByUserId')->references('AdminId')->on('tbladmin')->onDelete('set null');
+            });
+        } else {
+            $tableName = Schema::hasTable('tbltest') ? 'tbltest' : 'tblTest';
+            Schema::table($tableName, function (Blueprint $table) use ($tableName) {
+                if (!Schema::hasColumn($tableName, 'QuestionLimit')) {
+                    $table->unsignedInteger('QuestionLimit')->nullable()->after('PassScore');
+                }
+                if (!Schema::hasColumn($tableName, 'RandomizeAnswers')) {
+                    $table->boolean('RandomizeAnswers')->default(false)->after('RandomizeQuestions');
+                }
             });
         }
     }

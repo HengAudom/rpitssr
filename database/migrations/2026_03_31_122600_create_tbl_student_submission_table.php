@@ -16,6 +16,7 @@ return new class extends Migration
                 $table->bigIncrements('SubmissionId');
                 $table->unsignedBigInteger('StudentId');
                 $table->unsignedBigInteger('TestId');
+                $table->json('AssignedQuestionIds')->nullable();
                 $table->timestamp('StartedAt')->nullable();
                 $table->timestamp('CompletedAt')->nullable();
                 $table->integer('TotalCorrect')->default(0);
@@ -25,6 +26,13 @@ return new class extends Migration
 
                 $table->foreign('StudentId')->references('StudentId')->on('tblstudent')->onDelete('cascade');
                 $table->foreign('TestId')->references('TestId')->on('tbltest')->onDelete('cascade');
+            });
+        } else {
+            $tableName = Schema::hasTable('tblstudentsubmission') ? 'tblstudentsubmission' : 'tblStudentSubmission';
+            Schema::table($tableName, function (Blueprint $table) use ($tableName) {
+                if (!Schema::hasColumn($tableName, 'AssignedQuestionIds')) {
+                    $table->json('AssignedQuestionIds')->nullable()->after('TestId');
+                }
             });
         }
     }
