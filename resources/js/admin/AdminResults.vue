@@ -469,6 +469,67 @@
           </div>
         </div>
 
+        <!-- Overall Result Evaluation Criteria (Divisor & Pass Score) -->
+        <div v-if="exportViewMode === 'student'" class="space-y-2.5 bg-blue-50/70 p-3.5 rounded-2xl border border-blue-200/80">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-lg text-blue-700">calculate</span>
+              <label class="text-xs font-bold uppercase tracking-wider text-blue-950">
+                {{ lang === 'kh' ? 'លក្ខខណ្ឌគណនាមធ្យមភាគ និងលទ្ធផលរួម' : 'Average & Overall Result Evaluation Criteria' }}
+              </label>
+            </div>
+            <span class="text-[10px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded-md border border-blue-200 shadow-2xs">
+              {{ lang === 'kh' ? 'របាយការណ៍រួម' : 'Summary Evaluation' }}
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-700">
+                {{ lang === 'kh' ? 'ចំនួនវិញ្ញាសាកំណត់ (ចែកមធ្យមភាគ)' : 'Expected Subjects Count (Divisor)' }}
+              </label>
+              <input
+                v-model.number="exportRequiredSubjects"
+                type="number"
+                min="1"
+                class="w-full px-3 py-2 bg-white rounded-xl border border-blue-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-2xs"
+                :placeholder="lang === 'kh' ? 'ឧ. ៣' : 'e.g. 3'"
+              />
+              <p class="text-[10px] text-slate-500 leading-tight">
+                {{ lang === 'kh' ? 'បូកពិន្ទុវិញ្ញាសាទាំងអស់ រួចចែកនឹងចំនួននេះ ដើម្បីរកមធ្យមភាគ' : 'Sum of scores is divided by this number to get the average' }}
+              </p>
+            </div>
+
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-700">
+                {{ lang === 'kh' ? 'ពិន្ទុមធ្យមភាគជាប់ (Passing Score)' : 'Passing Average Score' }}
+              </label>
+              <input
+                v-model.number="exportPassAverageScore"
+                type="number"
+                min="0"
+                class="w-full px-3 py-2 bg-white rounded-xl border border-blue-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-2xs"
+                :placeholder="lang === 'kh' ? 'ឧ. ៥០' : 'e.g. 50'"
+              />
+              <p class="text-[10px] text-slate-500 leading-tight">
+                {{ lang === 'kh' ? 'មធ្យមភាគ ≥ ចំនួននេះ ជាប់ បើតិចជាង ធ្លាក់' : 'Average >= this score is Pass, otherwise Fail' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Formula Help Banner -->
+          <div class="p-2.5 rounded-xl bg-white/90 border border-blue-200/70 text-[11px] text-slate-700 flex items-center justify-between flex-wrap gap-2">
+            <span>
+              <strong class="text-blue-900">{{ lang === 'kh' ? 'រូបមន្តគណនា៖' : 'Formula:' }}</strong>
+              {{ lang === 'kh' ? `មធ្យមភាគ = (ពិន្ទុសរុប / ${exportRequiredSubjects || 1})` : `Average = (Total Score / ${exportRequiredSubjects || 1})` }}
+            </span>
+            <span class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              {{ lang === 'kh' ? `ជាប់កាលណា មធ្យមភាគ ≥ ${exportPassAverageScore ?? 50}` : `Pass if Average >= ${exportPassAverageScore ?? 50}` }}
+            </span>
+          </div>
+        </div>
+
         <!-- Preview Count Banner -->
         <div
           v-if="exportFilteredResults.length > 0"
@@ -567,7 +628,7 @@ import Skeleton from '../components/ui/Skeleton.vue'
 import { useLang } from '../utils/useLang'
 import { useToast } from '../composables/useToast'
 import { usePermissions } from '../composables/usePermissions'
-import * as XLSX from 'xlsx'
+import XLSX from 'xlsx-js-style'
 
 const router = useRouter()
 const { lang } = useLang()
@@ -596,6 +657,8 @@ const exportViewMode = ref('student')
 const exportYear = ref('')
 const exportSession = ref('')
 const exportTest = ref('')
+const exportRequiredSubjects = ref(3)
+const exportPassAverageScore = ref(50)
 
 const showDeleteDialog = ref(false)
 const submissionToDelete = ref(null)
@@ -811,10 +874,19 @@ const exportGroupedStudents = computed(() => {
     }
   })
 
+  const requiredCount = Number(exportRequiredSubjects.value) > 0 ? Number(exportRequiredSubjects.value) : 1
+  const passThreshold = Number(exportPassAverageScore.value != null && exportPassAverageScore.value !== '' ? exportPassAverageScore.value : 50)
+
   return Array.from(map.values()).map(s => {
     const totalScore = s.submissions.reduce((acc, sub) => acc + sub.score, 0)
     const totalMaxMarks = s.submissions.reduce((acc, sub) => acc + sub.totalMarks, 0)
     const totalCorrect = s.submissions.reduce((acc, sub) => acc + sub.totalCorrect, 0)
+
+    // Divisor & Average calculation
+    const divisor = requiredCount > 0 ? requiredCount : (s.submissions.length || 1)
+    const averageScore = Number((totalScore / divisor).toFixed(2))
+    const isOverallPassed = averageScore >= passThreshold
+
     const allPassed = s.submissions.length > 0 && s.submissions.every(sub => sub.isPassed)
     const avgAccuracy = totalMaxMarks > 0
       ? Math.round((totalScore / totalMaxMarks) * 100)
@@ -827,6 +899,10 @@ const exportGroupedStudents = computed(() => {
       totalScore,
       totalMaxMarks,
       totalCorrect,
+      divisor,
+      averageScore,
+      isOverallPassed,
+      passThreshold,
       allPassed,
       avgAccuracy,
       examsSummary,
@@ -893,6 +969,9 @@ const openExportModal = (format = 'excel') => {
 
   exportSession.value = selectedSession.value || ''
   exportTest.value = selectedTest.value || ''
+  const distinctCount = exportDistinctTests.value.length
+  exportRequiredSubjects.value = distinctCount > 0 ? distinctCount : 3
+  exportPassAverageScore.value = 50
   showExportModal.value = true
 }
 
@@ -933,8 +1012,11 @@ const executeExportExcel = () => {
         merges.push({ s: { r: startR, c: 4 }, e: { r: endR, c: 4 } }) // Exam Shift
         merges.push({ s: { r: startR, c: 5 }, e: { r: endR, c: 5 } }) // Exam Day
         merges.push({ s: { r: startR, c: 10 }, e: { r: endR, c: 10 } }) // Total Score
-        merges.push({ s: { r: startR, c: 11 }, e: { r: endR, c: 11 } }) // Overall Result
+        merges.push({ s: { r: startR, c: 11 }, e: { r: endR, c: 11 } }) // Average Score
+        merges.push({ s: { r: startR, c: 12 }, e: { r: endR, c: 12 } }) // Overall Result
       }
+
+      const overallResultText = s.isOverallPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)'
 
       if (!s.submissions || !s.submissions.length) {
         exportData.push({
@@ -949,6 +1031,7 @@ const executeExportExcel = () => {
           'អត្រាត្រឹមត្រូវ (Accuracy)': '-',
           'លទ្ធផល (Result)': '-',
           'ពិន្ទុសរុបគ្រប់មុខ (Total Score)': '-',
+          'មធ្យមភាគ (Average Score)': '-',
           'លទ្ធផលរួម (Overall Result)': '-',
           'កាលបរិច្ឆេទ (Date)': formatDate(s.examDate)
         })
@@ -966,7 +1049,8 @@ const executeExportExcel = () => {
             'អត្រាត្រឹមត្រូវ (Accuracy)': `${sub.accuracy}%`,
             'លទ្ធផល (Result)': sub.isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
             'ពិន្ទុសរុបគ្រប់មុខ (Total Score)': subIdx === 0 ? `${s.totalScore} / ${s.totalMaxMarks}` : '',
-            'លទ្ធផលរួម (Overall Result)': subIdx === 0 ? (s.allPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)') : '',
+            'មធ្យមភាគ (Average Score)': subIdx === 0 ? s.averageScore : '',
+            'លទ្ធផលរួម (Overall Result)': subIdx === 0 ? overallResultText : '',
             'កាលបរិច្ឆេទ (Date)': formatDate(sub.completedAt || s.examDate)
           })
         })
@@ -986,8 +1070,9 @@ const executeExportExcel = () => {
       { wch: 16 }, // Score
       { wch: 16 }, // Accuracy
       { wch: 16 }, // Result
-      { wch: 22 }, // Total Score
-      { wch: 16 }, // Overall Result
+      { wch: 20 }, // Total Score
+      { wch: 18 }, // Average Score
+      { wch: 18 }, // Overall Result
       { wch: 22 }  // Date
     ]
   } else {
@@ -1030,6 +1115,115 @@ const executeExportExcel = () => {
   if (merges.length > 0) {
     ws['!merges'] = merges
   }
+
+  // Apply rich styling with xlsx-js-style
+  const FONT_NAME = 'Khmer OS Battambang'
+  const numCols = colWidths.length
+
+  // Style Header Row (Row 0)
+  for (let c = 0; c < numCols; c++) {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c })
+    if (ws[cellRef]) {
+      ws[cellRef].s = {
+        font: { name: FONT_NAME, sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '1E3A8A' } },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: '93C5FD' } },
+          bottom: { style: 'medium', color: { rgb: '1D4ED8' } },
+          left: { style: 'thin', color: { rgb: '93C5FD' } },
+          right: { style: 'thin', color: { rgb: '93C5FD' } }
+        }
+      }
+    }
+  }
+
+  // Style Data Rows
+  for (let r = 1; r <= exportData.length; r++) {
+    const isEven = r % 2 === 0
+    const rowBg = isEven ? 'F8FAFC' : 'FFFFFF'
+
+    for (let c = 0; c < numCols; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r, c })
+      if (ws[cellRef]) {
+        const val = String(ws[cellRef].v || '')
+        let fontColor = '1E293B'
+        let fontBold = false
+        let cellBg = rowBg
+
+        if (exportViewMode.value === 'student') {
+          // Student ID
+          if (c === 2) {
+            fontColor = '2563EB'
+            fontBold = true
+          }
+          // Test Result (col 9) or Overall Result (col 12)
+          if (c === 9 || c === 12) {
+            if (val.includes('ជាប់') || val.includes('Pass')) {
+              fontColor = '166534'
+              cellBg = 'DCFCE7'
+              fontBold = true
+            } else if (val.includes('ធ្លាក់') || val.includes('Fail')) {
+              fontColor = '991B1B'
+              cellBg = 'FEE2E2'
+              fontBold = true
+            }
+          }
+          // Average Score (col 11)
+          if (c === 11 && val && val !== '-') {
+            fontColor = '1E3A8A'
+            fontBold = true
+          }
+          // Total Score (col 10)
+          if (c === 10 && val && val !== '-') {
+            fontBold = true
+          }
+        } else {
+          // Detail mode
+          if (c === 2) {
+            fontColor = '2563EB'
+            fontBold = true
+          }
+          if (c === 9) {
+            if (val.includes('ជាប់') || val.includes('Pass')) {
+              fontColor = '166534'
+              cellBg = 'DCFCE7'
+              fontBold = true
+            } else if (val.includes('ធ្លាក់') || val.includes('Fail')) {
+              fontColor = '991B1B'
+              cellBg = 'FEE2E2'
+              fontBold = true
+            }
+          }
+        }
+
+        const isCenter = (c === 0 || c === 2 || c === 3 || c === 4 || c === 5 || c === 7 || c === 8 || c === 9 || c === 10 || c === 11 || c === 12 || c === 13)
+
+        ws[cellRef].s = {
+          font: {
+            name: FONT_NAME,
+            sz: 10.5,
+            color: { rgb: fontColor },
+            bold: fontBold
+          },
+          fill: { fgColor: { rgb: cellBg } },
+          alignment: {
+            horizontal: isCenter ? 'center' : 'left',
+            vertical: 'center',
+            wrapText: true
+          },
+          border: {
+            top: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            bottom: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            left: { style: 'thin', color: { rgb: 'E2E8F0' } },
+            right: { style: 'thin', color: { rgb: 'E2E8F0' } }
+          }
+        }
+      }
+    }
+  }
+
+  ws['!views'] = [{ showGridLines: true }]
 
   const wb = XLSX.utils.book_new()
   const sheetTitle = exportViewMode.value === 'student' ? 'Student Exam Summary' : 'Exam Submissions'
@@ -1082,6 +1276,7 @@ const executeExportPDF = () => {
         <th style="text-align: center;">${lang.value === 'kh' ? 'ពិន្ទុ (Score)' : 'Score'}</th>
         <th style="text-align: center;">${lang.value === 'kh' ? 'លទ្ធផល' : 'Result'}</th>
         <th style="text-align: center;">${lang.value === 'kh' ? 'ពិន្ទុសរុបគ្រប់មុខ' : 'Total Score'}</th>
+        <th style="text-align: center;">${lang.value === 'kh' ? 'មធ្យមភាគ' : 'Average'}</th>
         <th style="text-align: center;">${lang.value === 'kh' ? 'លទ្ធផលរួម' : 'Overall Result'}</th>
         <th>${lang.value === 'kh' ? 'កាលបរិច្ឆេទ (Date)' : 'Date'}</th>
       </tr>
@@ -1106,6 +1301,7 @@ const executeExportPDF = () => {
               ${s.examDay && s.examDay !== '-' ? `<div style="font-size: 10px; color: #0369a1;">${s.examDay}</div>` : ''}
             </td>
             <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">-</td>
+            <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">-</td>
             <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">-</td>
             <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">-</td>
             <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">-</td>
@@ -1146,10 +1342,17 @@ const executeExportPDF = () => {
                   ${s.totalScore} / ${s.totalMaxMarks}
                   <div style="font-size: 10px; font-weight: normal; color: #64748b;">${s.avgAccuracy}% (${s.examCount} ${lang.value === 'kh' ? 'វិញ្ញាសា' : 'tests'})</div>
                 </td>
+                <td rowspan="${span}" style="text-align: center; vertical-align: middle; padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 12px; color: #1e3a8a;">
+                  ${s.averageScore}
+                  <div style="font-size: 9.5px; font-weight: normal; color: #64748b;">(÷${s.divisor})</div>
+                </td>
                 <td rowspan="${span}" style="text-align: center; vertical-align: middle; padding: 6px 8px; border: 1px solid #cbd5e1;">
-                  <span style="display: inline-block; padding: 2px 6px; border-radius: 9999px; font-size: 10px; font-weight: bold; background-color: ${s.allPassed ? '#dcfce7' : '#fee2e2'}; color: ${s.allPassed ? '#166534' : '#991b1b'};">
-                    ${s.allPassed ? (lang.value === 'kh' ? 'ជាប់' : 'Pass') : (lang.value === 'kh' ? 'ធ្លាក់' : 'Fail')}
+                  <span style="display: inline-block; padding: 3px 8px; border-radius: 9999px; font-size: 11px; font-weight: bold; background-color: ${s.isOverallPassed ? '#dcfce7' : '#fee2e2'}; color: ${s.isOverallPassed ? '#166534' : '#991b1b'};">
+                    ${s.isOverallPassed ? (lang.value === 'kh' ? 'ជាប់' : 'Pass') : (lang.value === 'kh' ? 'ធ្លាក់' : 'Fail')}
                   </span>
+                  <div style="font-size: 9px; font-weight: normal; color: #64748b; margin-top: 2px;">
+                    ${lang.value === 'kh' ? `មធ្យមភាគ ≥ ${s.passThreshold}` : `Avg ≥ ${s.passThreshold}`}
+                  </div>
                 </td>
                 <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDate(sub.completedAt || s.examDate)}</td>
               </tr>
@@ -1234,12 +1437,13 @@ const executeExportPDF = () => {
         <title>${title} - ${yearDisplay}</title>
         <style>
           @page { size: landscape; margin: 10mm; }
-          body { font-family: 'Kantumruy Pro', 'Inter', system-ui, sans-serif; margin: 0; color: #0f172a; font-size: 11px; }
+          body { font-family: 'Kantumruy Pro', 'Khmer OS Battambang', 'Inter', system-ui, sans-serif; margin: 0; color: #0f172a; font-size: 11px; }
           .header { text-align: center; margin-bottom: 16px; border-bottom: 2px solid #0284c7; padding-bottom: 8px; }
           .header h1 { margin: 0 0 4px; font-size: 18px; color: #0f172a; }
-          .header .badges { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; }
+          .header .badges { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
           .header .badge { display: inline-block; font-size: 11px; font-weight: bold; color: #1e40af; background: #eff6ff; padding: 2px 10px; border-radius: 9999px; border: 1px solid #bfdbfe; }
           .header .badge-shift { color: #065f46; background: #ecfdf5; border-color: #a7f3d0; }
+          .header .badge-criteria { color: #4338ca; background: #eef2ff; border-color: #c7d2fe; }
           .header p { margin: 6px 0 0; font-size: 11px; color: #64748b; }
           table { width: 100%; border-collapse: collapse; margin-top: 8px; }
           th { background-color: #f8fafc; padding: 8px; border: 1px solid #94a3b8; font-weight: bold; text-align: left; font-size: 10px; text-transform: uppercase; color: #475569; }
@@ -1254,6 +1458,7 @@ const executeExportPDF = () => {
           <div class="badges">
             <span class="badge">${lang.value === 'kh' ? 'ឆ្នាំសិក្សា' : 'Academic Year'}: ${yearDisplay}</span>
             <span class="badge badge-shift">${lang.value === 'kh' ? 'វេនប្រឡង' : 'Exam Shift'}: ${shiftDisplay}</span>
+            ${isStudentMode ? `<span class="badge badge-criteria">${lang.value === 'kh' ? `រូបមន្ត៖ មធ្យមភាគ (ចែក ${exportRequiredSubjects.value || 1}) ≥ ${exportPassAverageScore.value ?? 50} ជាប់` : `Formula: Avg (÷${exportRequiredSubjects.value || 1}) ≥ ${exportPassAverageScore.value ?? 50} to Pass`}</span>` : ''}
           </div>
           <p>${lang.value === 'kh' ? 'កាលបរិច្ឆេទបង្កើត' : 'Generated on'}: ${dateStr} | ${candidateSummaryText}</p>
         </div>
