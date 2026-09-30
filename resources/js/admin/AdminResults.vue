@@ -517,7 +517,7 @@
 
             <div class="flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-xl border border-indigo-200 shadow-2xs">
               <label class="text-xs font-bold text-slate-700">
-                {{ lang === 'kh' ? 'ពិន្ទុមធ្យមភាគជាប់ (Pass Score)' : 'Passing Average Score' }}
+                {{ lang === 'kh' ? 'ពិន្ទុជាប់ (%)' : 'Pass Score (%)' }}
               </label>
               <div class="flex items-center gap-1">
                 <input
@@ -856,10 +856,12 @@ const exportGroupedStudents = computed(() => {
     }
 
     const student = map.get(key)
-    const passPercent = (r.passScore != null && Number(r.passScore) > 0) ? Number(r.passScore) : 50
+    const configuredPassPercent = (exportPassAverageScore.value != null && Number(exportPassAverageScore.value) > 0)
+      ? Number(exportPassAverageScore.value)
+      : ((r.passScore != null && Number(r.passScore) > 0) ? Number(r.passScore) : 50)
     const testTotalMarks = Number(r.totalMarks) || 0
-    const passScorePoints = testTotalMarks > 0 ? Number(((passPercent / 100) * testTotalMarks).toFixed(2)) : passPercent
-    const isPassed = testTotalMarks > 0 ? (Number(r.score) >= passScorePoints) : (Number(r.accuracy) >= passPercent)
+    const passScorePoints = testTotalMarks > 0 ? Number(((configuredPassPercent / 100) * testTotalMarks).toFixed(2)) : configuredPassPercent
+    const isPassed = testTotalMarks > 0 ? (Number(r.score) >= passScorePoints) : (Number(r.accuracy) >= configuredPassPercent)
 
     const subData = {
       testId: r.testId,
@@ -868,7 +870,7 @@ const exportGroupedStudents = computed(() => {
       totalMarks: testTotalMarks,
       totalCorrect: Number(r.totalCorrect) || 0,
       accuracy: Number(r.accuracy) || 0,
-      passScore: passPercent,
+      passScore: configuredPassPercent,
       passScorePoints,
       isPassed,
       completedAt: r.completedAt
@@ -1042,6 +1044,19 @@ const executeExportExcel = () => {
       const overallResultText = s.isOverallPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)'
 
       if (!s.submissions || !s.submissions.length) {
+        let emptyPassScore = '-'
+        if (exportTest.value) {
+          const foundTest = tests.value.find(t => String(t.TestId || t.id) === String(exportTest.value))
+          if (foundTest) {
+            const passPct = (exportPassAverageScore.value != null && Number(exportPassAverageScore.value) > 0)
+              ? Number(exportPassAverageScore.value)
+              : (foundTest.passScore || foundTest.PassScore || 50)
+            const marks = Number(foundTest.totalMarks || foundTest.TotalMarks) || 0
+            if (marks > 0) {
+              emptyPassScore = Number(((passPct / 100) * marks).toFixed(2))
+            }
+          }
+        }
         exportData.push({
           'ល.រ (No.)': studentIdx + 1,
           'ឈ្មោះសិស្ស (Student Name)': s.studentName,
@@ -1051,7 +1066,7 @@ const executeExportExcel = () => {
           'កាលវិភាគថ្ងៃ (Exam Day)': s.examDay,
           'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': '-',
           'ពិន្ទុ (Score)': '-',
-          'ពិន្ទុជាប់ (Pass Score)': '-',
+          'ពិន្ទុជាប់ (Pass Score)': emptyPassScore,
           'លទ្ធផល (Result)': '-',
           'ពិន្ទុសរុបគ្រប់មុខ (Total Score)': '-',
           'មធ្យមភាគ (Average Score)': '-',
@@ -1060,7 +1075,9 @@ const executeExportExcel = () => {
         })
       } else {
         s.submissions.forEach((sub, subIdx) => {
-          const passPercent = (sub.passScore != null && Number(sub.passScore) > 0) ? Number(sub.passScore) : 50
+          const passPercent = (exportPassAverageScore.value != null && Number(exportPassAverageScore.value) > 0)
+            ? Number(exportPassAverageScore.value)
+            : ((sub.passScore != null && Number(sub.passScore) > 0) ? Number(sub.passScore) : 50)
           const testTotalMarks = Number(sub.totalMarks) || 0
           const testPassScore = sub.passScorePoints != null
             ? sub.passScorePoints
@@ -1110,7 +1127,9 @@ const executeExportExcel = () => {
   } else {
     // Detail by submission mode
     exportData = exportFilteredResults.value.map((r, index) => {
-      const passPercent = (r.passScore != null && Number(r.passScore) > 0) ? Number(r.passScore) : 50
+      const passPercent = (exportPassAverageScore.value != null && Number(exportPassAverageScore.value) > 0)
+        ? Number(exportPassAverageScore.value)
+        : ((r.passScore != null && Number(r.passScore) > 0) ? Number(r.passScore) : 50)
       const testTotalMarks = Number(r.totalMarks) || 0
       const testPassScore = testTotalMarks > 0 ? Number(((passPercent / 100) * testTotalMarks).toFixed(2)) : passPercent
       const isPassed = testTotalMarks > 0 ? (Number(r.score) >= testPassScore) : (Number(r.accuracy) >= passPercent)
@@ -1162,10 +1181,26 @@ const executeExportExcel = () => {
       const excelEnd = endR + 1
 
       if (s.submissions && s.submissions.length) {
-        // Individual Exam Results: Column J (Result): =IF(H... >= I..., "ជាប់ (Pass)", "ធ្លាក់ (Fail)")
+        // Individual Exam Results:
+        // Column I (Pass Score): ensure explicit number format
+        // Column J (Result): =IF(H... >= I..., "ជាប់ (Pass)", "ធ្លាក់ (Fail)")
         s.submissions.forEach((sub, subIdx) => {
           const rowIdx = startR + subIdx
           const excelRow = rowIdx + 1
+
+          const passPercent = (exportPassAverageScore.value != null && Number(exportPassAverageScore.value) > 0)
+            ? Number(exportPassAverageScore.value)
+            : ((sub.passScore != null && Number(sub.passScore) > 0) ? Number(sub.passScore) : 50)
+          const testTotalMarks = Number(sub.totalMarks) || 0
+          const testPassScore = sub.passScorePoints != null
+            ? sub.passScorePoints
+            : (testTotalMarks > 0 ? Number(((passPercent / 100) * testTotalMarks).toFixed(2)) : passPercent)
+
+          const cellRefI = XLSX.utils.encode_cell({ r: rowIdx, c: 8 })
+          if (ws[cellRefI] && typeof testPassScore === 'number') {
+            ws[cellRefI].t = 'n'
+            ws[cellRefI].v = testPassScore
+          }
 
           const cellRefJ = XLSX.utils.encode_cell({ r: rowIdx, c: 9 })
           if (ws[cellRefJ]) {
@@ -1204,14 +1239,22 @@ const executeExportExcel = () => {
       studentRow += subCount
     })
   } else {
-    // Detail mode formulas for Column J (Result): =IF(H... >= I..., "ជាប់ (Pass)", "ធ្លាក់ (Fail)")
+    // Detail mode formulas for Column I (Pass Score) & Column J (Result): =IF(H... >= I..., "ជាប់ (Pass)", "ធ្លាក់ (Fail)")
     exportFilteredResults.value.forEach((r, idx) => {
       const rowIdx = idx + 1
       const excelRow = rowIdx + 1
-      const passPercent = (r.passScore != null && Number(r.passScore) > 0) ? Number(r.passScore) : 50
+      const passPercent = (exportPassAverageScore.value != null && Number(exportPassAverageScore.value) > 0)
+        ? Number(exportPassAverageScore.value)
+        : ((r.passScore != null && Number(r.passScore) > 0) ? Number(r.passScore) : 50)
       const testTotalMarks = Number(r.totalMarks) || 0
       const testPassScore = testTotalMarks > 0 ? Number(((passPercent / 100) * testTotalMarks).toFixed(2)) : passPercent
       const isPassed = testTotalMarks > 0 ? (Number(r.score) >= testPassScore) : (Number(r.accuracy) >= passPercent)
+
+      const cellRefI = XLSX.utils.encode_cell({ r: rowIdx, c: 8 })
+      if (ws[cellRefI] && typeof testPassScore === 'number') {
+        ws[cellRefI].t = 'n'
+        ws[cellRefI].v = testPassScore
+      }
 
       const cellRefJ = XLSX.utils.encode_cell({ r: rowIdx, c: 9 })
       if (ws[cellRefJ]) {

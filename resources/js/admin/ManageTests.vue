@@ -1038,7 +1038,7 @@
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-slate-600">{{ lang === 'kh' ? 'ពិន្ទុជាប់' : 'Pass Score' }}:</span>
-                <strong class="text-emerald-700 font-bold text-xs">{{ passScore }}%</strong>
+                <strong class="text-emerald-700 font-bold text-xs">{{ calculatedPassScorePoints }} pts ({{ passScore ?? 50 }}%)</strong>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-slate-600">{{ lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Randomize Questions' }}:</span>
@@ -1831,6 +1831,12 @@ const calculatedTotalMarks = computed(() => {
   return totalBankPoints
 })
 
+const calculatedPassScorePoints = computed(() => {
+  const total = Number(calculatedTotalMarks.value) || 0
+  const pct = (passScore.value != null && Number(passScore.value) >= 0) ? Number(passScore.value) : 50
+  return total > 0 ? Number(((pct / 100) * total).toFixed(2)) : pct
+})
+
 const getEffectiveTotalMarks = (test) => {
   if (!test) return 0
   const qCount = (test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0
@@ -2257,7 +2263,7 @@ const exportTestToExcel = async (test) => {
       [isKh ? 'វេនប្រឡង៖' : 'Exam Shift:', tData.sessionName || tData.session_name || (isKh ? 'គ្រប់វេនទាំងអស់' : 'All Shifts')],
       [isKh ? 'រយៈពេល៖' : 'Duration:', isKh ? `${tData.durationMinutes || 0} នាទី` : `${tData.durationMinutes || 0} mins`],
       [isKh ? 'ពិន្ទុសរុប៖' : 'Total Marks:', isKh ? `${tData.totalMarks || 0} ពិន្ទុ` : `${tData.totalMarks || 0} pts`],
-      [isKh ? 'ពិន្ទុជាប់៖' : 'Pass Score:', `${tData.passScore ?? 50}%`],
+      [isKh ? 'ពិន្ទុជាប់៖' : 'Pass Score:', `${Math.round(((tData.passScore ?? 50) / 100) * (tData.totalMarks || 0))} pts (${tData.passScore ?? 50}%)`],
       [isKh ? 'កំណត់ចំនួនសំណួរ៖' : 'Question Limit:', tData.questionLimit ? (isKh ? `${tData.questionLimit} សំណួរ` : `${tData.questionLimit} questions`) : (isKh ? 'ទាំងអស់' : 'All')],
       [isKh ? 'សំណួរចៃដន្យ៖' : 'Randomize Questions:', tData.randomizeQuestions ? (isKh ? 'បើក' : 'Yes') : (isKh ? 'បិទ' : 'No')],
       [isKh ? 'ចម្លើយចៃដន្យ៖' : 'Randomize Answers:', tData.randomizeAnswers ? (isKh ? 'បើក' : 'Yes') : (isKh ? 'បិទ' : 'No')],
@@ -2488,7 +2494,7 @@ const exportTestToPdf = async (test) => {
             </div>
             <div class="meta-item">
               <strong>${isKh ? 'ពិន្ទុជាប់៖' : 'Pass Score:'}</strong>
-              <span>${tData.passScore ?? 50}%</span>
+              <span>${Math.round(((tData.passScore ?? 50) / 100) * (tData.totalMarks || 0))} pts (${tData.passScore ?? 50}%)</span>
             </div>
           </div>
           <div class="questions-list">
