@@ -595,7 +595,7 @@ const executeForceSubmit = async () => {
 
 useRealtimeSync(() => {
   fetchData(true)
-}, 3000)
+}, 12000)
 
 onMounted(() => {
   fetchData(false)

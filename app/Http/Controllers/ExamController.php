@@ -319,67 +319,76 @@ class ExamController extends Controller
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        $student = ($user instanceof Student) 
-            ? $user 
-            : (Student::find($user->StudentId ?? $user->id) ?? Student::where('UserId', $user->id)->first());
-        if (!$student) {
-            return response()->json(['message' => 'Student not found.'], 404);
-        }
+        try {
+            $submission = StudentSubmission::find($submissionId);
+            if (!$submission) {
+                return response()->json(['message' => 'Submission not found.'], 404);
+            }
 
-        $submission = StudentSubmission::where('SubmissionId', $submissionId)
-            ->where('StudentId', $student->StudentId)
-            ->first();
+            // If user is a student, ensure they own this submission
+            $isStudent = ($user instanceof Student) || (($user->role ?? null) === 'Student');
+            if ($isStudent) {
+                $student = ($user instanceof Student) 
+                    ? $user 
+                    : (Student::find($user->StudentId ?? $user->id) ?? Student::where('UserId', $user->id)->first());
+                $studentId = $student?->StudentId ?? $user->StudentId ?? $user->id ?? 0;
+                if ((int)$submission->StudentId !== (int)$studentId) {
+                    return response()->json(['message' => 'Forbidden. You do not have permission to complete this submission.'], 403);
+                }
+            }
 
-        if (!$submission) {
-            return response()->json(['message' => 'Submission not found.'], 404);
-        }
+            if ($submission->CompletedAt) {
+                return response()->json([
+                    'success' => true,
+                    'submitted' => true,
+                    'message' => 'Already completed.',
+                    'submissionId' => $submission->SubmissionId
+                ]);
+            }
 
-        if ($submission->CompletedAt) {
-            return response()->json(['message' => 'Already completed.', 'submissionId' => $submission->SubmissionId]);
-        }
+            $test = Test::find($submission->TestId);
+            $totalQuestions = Question::where('TestId', $submission->TestId)->count();
+            $answeredCount = SubmissionDetail::where('SubmissionId', $submissionId)
+                ->whereNotNull('SelectedAnswerId')
+                ->count();
 
-        $test = Test::find($submission->TestId);
-        $totalQuestions = Question::where('TestId', $submission->TestId)->count();
-        $answeredCount = SubmissionDetail::where('SubmissionId', $submissionId)
-            ->whereNotNull('SelectedAnswerId')
-            ->count();
+            $isForced = $request->boolean('forcedTimeout') || $request->boolean('autoSubmit');
+            if (!$isForced && $totalQuestions > 0 && $answeredCount < $totalQuestions) {
+                $unanswered = $totalQuestions - $answeredCount;
+                return response()->json([
+                    'success' => false,
+                    'message' => "មិនអាចបញ្ជូនការប្រឡងបានទេ! អ្នកត្រូវតែឆ្លើយសំណួរឱ្យបានគ្រប់ទាំងអស់ (នៅសល់ {$unanswered} សំណួរទៀតមិនទាន់ឆ្លើយ)។",
+                    'unansweredCount' => $unanswered,
+                ], 422);
+            }
 
-        $isForced = $request->boolean('forcedTimeout') || $request->boolean('autoSubmit');
-        if (!$isForced && $answeredCount < $totalQuestions) {
-            $unanswered = $totalQuestions - $answeredCount;
+            $totalCorrect = SubmissionDetail::where('SubmissionId', $submissionId)->where('IsCorrect', true)->count();
+            $totalMarks = $test ? (float) ($test->TotalMarks ?: 100.0) : 100.0;
+
+            $score = $totalQuestions > 0
+                ? round(($totalCorrect / $totalQuestions) * $totalMarks, 2)
+                : 0;
+
+            $interruptions = (int) $request->input('interruptions', 0);
+
+            $submission->TotalCorrect = $totalCorrect;
+            $submission->Score = $score;
+            $submission->CompletedAt = now();
+            $submission->Interruptions = $interruptions;
+            $submission->save();
+
+            return response()->json([
+                'success' => true,
+                'submitted' => true,
+                'message' => 'ការប្រឡងត្រូវបាន Submit ជោគជ័យ (Your exam has been submitted successfully).',
+                'submissionId' => $submission->SubmissionId,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Exam complete failed: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => "មិនអាចបញ្ជូនការប្រឡងបានទេ! អ្នកត្រូវតែឆ្លើយសំណួរឱ្យបានគ្រប់ទាំងអស់ (នៅសល់ {$unanswered} សំណួរទៀតមិនទាន់ឆ្លើយ)។",
-                'unansweredCount' => $unanswered,
-            ], 422);
+                'message' => 'Submission error: ' . $e->getMessage()
+            ], 500);
         }
-
-        $totalCorrect = SubmissionDetail::where('SubmissionId', $submissionId)->where('IsCorrect', true)->count();
-
-        $score = $totalQuestions > 0
-            ? round(($totalCorrect / $totalQuestions) * $test->TotalMarks, 2)
-            : 0;
-
-        $interruptions = (int) $request->input('interruptions', 0);
-
-        $submission->TotalCorrect = $totalCorrect;
-        $submission->Score = $score;
-        $submission->CompletedAt = now();
-
-        try {
-            if (\Illuminate\Support\Facades\Schema::hasColumn('tblstudentsubmission', 'Interruptions') ||
-                \Illuminate\Support\Facades\Schema::hasColumn('tblStudentSubmission', 'Interruptions')) {
-                $submission->Interruptions = $interruptions;
-            }
-        } catch (\Throwable $e) {}
-
-        $submission->save();
-
-        return response()->json([
-            'success' => true,
-            'submitted' => true,
-            'message' => 'ការប្រឡងត្រូវបាន Submit ជោគជ័យ (Your exam has been submitted successfully).',
-            'submissionId' => $submission->SubmissionId,
-        ]);
     }
 }

@@ -21,16 +21,22 @@ export function notifyRealtimeChange(type = 'general', data = null) {
  * Realtime synchronization composable.
  * Listens to BroadcastChannel events, window focus, visibility changes, and runs smart silent polling.
  * @param {Function} refreshCallback - Function to re-fetch data
- * @param {number} intervalMs - Polling interval in ms (default 3000ms = 3s)
+ * @param {number} intervalMs - Polling interval in ms (default 25000ms = 25s to protect database connection limits)
  */
-export function useRealtimeSync(refreshCallback, intervalMs = 3000) {
+export function useRealtimeSync(refreshCallback, intervalMs = 25000) {
   let timer = null
   let isFetching = false
+  let lastFetchTime = 0
 
   const triggerRefresh = async (reason = 'sync') => {
+    const now = Date.now()
+    // Don't refetch if already fetching or if fetched less than 3 seconds ago (unless broadcast)
     if (isFetching || !refreshCallback || typeof refreshCallback !== 'function') return
+    if (reason !== 'broadcast' && (now - lastFetchTime) < 3000) return
+
     try {
       isFetching = true
+      lastFetchTime = now
       await refreshCallback(reason)
     } catch (e) {
       // ignore background refresh errors

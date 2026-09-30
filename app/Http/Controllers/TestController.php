@@ -128,50 +128,60 @@ class TestController extends Controller
     }
 
     /**
-     * Return a single test with questions and answers (for editing).
+     * Return a single test with questions and answers (for editing or export).
      */
     public function show(Request $request, $id)
     {
-        if (!AdminController::checkAdminPermission($request->user(), 'Exams', 'view')) {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        if (!AdminController::checkAdminPermission($user, 'Exams', 'view') && !AdminController::checkAdminPermission($user, 'Exams', 'export')) {
             return response()->json(['message' => 'Unauthorized. You do not have permission to view exams.'], 403);
         }
 
-        $test = Test::with(['questions.answers', 'session'])->find($id);
-        if (!$test) {
-            return response()->json(['message' => 'Test not found.'], 404);
-        }
+        try {
+            $test = Test::with(['questions.answers', 'session'])->find($id);
+            if (!$test) {
+                return response()->json(['message' => 'Test not found.'], 404);
+            }
 
-        return response()->json([
-            'test' => [
-                'id' => $test->TestId,
-                'name' => $test->TestName,
-                'sessionId' => $test->SessionId,
-                'sessionName' => $test->session?->SessionName,
-                'examDay' => $test->ExamDay,
-                'academicYear' => $test->AcademicYear,
-                'durationMinutes' => $test->DurationMinutes,
-                'totalMarks' => $test->TotalMarks,
-                'passScore' => $test->PassScore ?? 50,
-                'randomizeQuestions' => (bool)$test->RandomizeQuestions,
-                'scheduledAt' => $test->ScheduledAt?->toDateTimeString(),
-                'finishedAt' => $test->FinishedAt?->toDateTimeString(),
-                'status' => $test->Status,
-                'questions' => $test->questions->map(function ($q) {
-                    return [
-                        'id' => $q->QuestionId,
-                        'text' => $q->QuestionText,
-                        'passage' => $q->Passage,
-                        'isExample' => (bool)($q->IsExample || preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($q->QuestionText))),
-                        'points' => $q->Points,
-                        'answers' => $q->answers->map(fn($a) => [
-                            'id' => $a->AnswerId,
-                            'text' => $a->AnswerText,
-                            'correct' => $a->IsCorrect,
-                        ])->values(),
-                    ];
-                })->values(),
-            ],
-        ]);
+            return response()->json([
+                'test' => [
+                    'id' => $test->TestId,
+                    'name' => $test->TestName,
+                    'sessionId' => $test->SessionId,
+                    'sessionName' => $test->session?->SessionName,
+                    'examDay' => $test->ExamDay,
+                    'academicYear' => $test->AcademicYear,
+                    'durationMinutes' => $test->DurationMinutes,
+                    'totalMarks' => $test->TotalMarks,
+                    'passScore' => $test->PassScore ?? 50,
+                    'randomizeQuestions' => (bool)$test->RandomizeQuestions,
+                    'scheduledAt' => $test->ScheduledAt?->toDateTimeString(),
+                    'finishedAt' => $test->FinishedAt?->toDateTimeString(),
+                    'status' => $test->Status,
+                    'questions' => ($test->questions ?? collect())->map(function ($q) {
+                        return [
+                            'id' => $q->QuestionId,
+                            'text' => $q->QuestionText ?? '',
+                            'passage' => $q->Passage ?? '',
+                            'isExample' => (bool)($q->IsExample || preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($q->QuestionText ?? ''))),
+                            'points' => $q->Points ?? 1,
+                            'answers' => ($q->answers ?? collect())->map(fn($a) => [
+                                'id' => $a->AnswerId,
+                                'text' => $a->AnswerText ?? '',
+                                'correct' => (bool)$a->IsCorrect,
+                            ])->values(),
+                        ];
+                    })->values(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Test show error: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to retrieve test details: ' . $e->getMessage()], 500);
+        }
     }
 
     /**

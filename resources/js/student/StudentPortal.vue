@@ -474,7 +474,7 @@ import { useRealtimeSync } from '../composables/useRealtimeSync'
 
 useRealtimeSync(() => {
   loadStudentData()
-}, 2500)
+}, 30000)
 
 onMounted(() => {
   fetchSettings()

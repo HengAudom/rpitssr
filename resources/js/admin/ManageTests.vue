@@ -1782,7 +1782,7 @@ useRealtimeSync(() => {
   if (!isBuilderMode.value) {
     loadData(true)
   }
-}, 4000)
+}, 30000)
 
 const openCreateBuilder = async () => {
   editingTestId.value = null
@@ -2052,9 +2052,15 @@ const exportTestToExcel = async (test) => {
     if (!tData.questions || tData.questions.length === 0) {
       const res = await axios.get(`/api/admin/tests/${test.id}`)
       tData = res.data.test || test
+      test.questions = tData.questions
     }
 
     const testQuestions = tData.questions || []
+    if (testQuestions.length === 0) {
+      toastError(lang.value === 'kh' ? 'វិញ្ញាសានេះមិនទាន់មានសំណួរនៅឡើយទេ' : 'This exam has no questions to export yet.')
+      return
+    }
+
     const rows = [
       ['កាលវិភាគ & វិញ្ញាសាប្រឡង (Exam Details)'],
       ['ឈ្មោះការប្រឡង (Exam Name):', tData.name || ''],
@@ -2112,7 +2118,8 @@ const exportTestToExcel = async (test) => {
     toastSuccess(lang.value === 'kh' ? 'ទាញយកឯកសារ Excel (.xlsx) ជោគជ័យ' : 'Excel file downloaded successfully')
   } catch (e) {
     console.error('Failed to export test to Excel:', e)
-    toastError(lang.value === 'kh' ? 'មិនអាចទាញយក Excel (.xlsx) បានទេ' : 'Failed to export Excel file')
+    const msg = e.response?.data?.message || (lang.value === 'kh' ? 'មិនអាចទាញយក Excel (.xlsx) បានទេ' : 'Failed to export Excel file')
+    toastError(msg)
   } finally {
     exportingExcelId.value = null
   }
@@ -2120,17 +2127,49 @@ const exportTestToExcel = async (test) => {
 
 const exportTestToPdf = async (test) => {
   exportingPdfId.value = test.id
+  // Open window immediately in user gesture to avoid popup blocker
+  let printWindow = null
+  try {
+    printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Loading Exam PDF...</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 80vh; color: #475569; margin: 0; }
+              .box { text-align: center; }
+              .spinner { width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+              @keyframes spin { to { transform: rotate(360deg); } }
+            </style>
+          </head>
+          <body>
+            <div class="box">
+              <div class="spinner"></div>
+              <h3 style="margin: 0 0 6px 0;">កំពុងទាញយកទិន្នន័យវិញ្ញាសា...</h3>
+              <p style="margin: 0; font-size: 13px; color: #94a3b8;">Preparing exam printable PDF...</p>
+            </div>
+          </body>
+        </html>
+      `)
+    }
+  } catch (err) {}
+
   try {
     let tData = test
     if (!tData.questions || tData.questions.length === 0) {
       const res = await axios.get(`/api/admin/tests/${test.id}`)
       tData = res.data.test || test
+      test.questions = tData.questions
     }
 
     const testQuestions = tData.questions || []
-    const printWindow = window.open('', '_blank')
     if (!printWindow) {
-      toastError(lang.value === 'kh' ? 'សូមអនុញ្ញាត Popup ដើម្បីមើល PDF' : 'Please allow popups to export PDF')
+      printWindow = window.open('', '_blank')
+    }
+    if (!printWindow) {
+      toastError(lang.value === 'kh' ? 'សូមអនុញ្ញាត Popup ក្នុងកម្មវិធីរុករក ដើម្បីបោះពុម្ព PDF' : 'Please allow popups in your browser to export PDF')
       return
     }
 
@@ -2169,11 +2208,12 @@ const exportTestToPdf = async (test) => {
       `
     }).join('')
 
+    printWindow.document.open()
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${tData.name} - Exam PDF</title>
+          <title>${tData.name || 'Exam'} - PDF</title>
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -2234,7 +2274,7 @@ const exportTestToPdf = async (test) => {
         </head>
         <body>
           <div class="header">
-            <h1>${tData.name}</h1>
+            <h1>${tData.name || 'Exam'}</h1>
             <p>វិទ្យាស្ថានជាតិបណ្តុះបណ្តាលបច្ចេកទេស (National Technical Training Institute)</p>
           </div>
           <div class="meta-grid">
@@ -2256,7 +2296,7 @@ const exportTestToPdf = async (test) => {
             </div>
           </div>
           <div class="questions-list">
-            ${questionsHtml || '<p style="text-align: center; color: #94a3b8;">មិនមានសំណួរក្នុងវិញ្ញាសានេះទេ</p>'}
+            ${questionsHtml || '<p style="text-align: center; color: #94a3b8; padding: 24px;">មិនមានសំណួរក្នុងវិញ្ញាសានេះទេ (No questions in this test)</p>'}
           </div>
           <script>
             window.onload = function() {
@@ -2272,7 +2312,11 @@ const exportTestToPdf = async (test) => {
     toastSuccess(lang.value === 'kh' ? 'បើកផ្ទាំងបោះពុម្ព PDF ជោគជ័យ' : 'PDF print preview opened')
   } catch (e) {
     console.error('Failed to export test to PDF:', e)
-    toastError(lang.value === 'kh' ? 'មិនអាចទាញយក PDF បានទេ' : 'Failed to export PDF')
+    if (printWindow) {
+      try { printWindow.close() } catch (err) {}
+    }
+    const msg = e.response?.data?.message || (lang.value === 'kh' ? 'មិនអាចទាញយក PDF បានទេ' : 'Failed to export PDF')
+    toastError(msg)
   } finally {
     exportingPdfId.value = null
   }

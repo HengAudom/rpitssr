@@ -45,8 +45,8 @@
     "APP_PACKAGES_CACHE": "/tmp/packages.php",
     "APP_ROUTES_CACHE": "/tmp/routes.php",
     "APP_SERVICES_CACHE": "/tmp/services.php",
-    "CACHE_STORE": "database",
-    "CACHE_DRIVER": "database",
+    "CACHE_STORE": "file",
+    "CACHE_DRIVER": "file",
     "SESSION_DRIVER": "database",
     "SESSION_COOKIE": "scholarship_session",
     "LOG_CHANNEL": "stderr"

@@ -1110,7 +1110,8 @@ const submitExam = async (forced = false) => {
     try {
       const res = await axios.post(`/api/exam/${submissionId.value}/complete`, {
         interruptions: interruptions.value,
-        forcedTimeout: forced
+        forcedTimeout: forced,
+        autoSubmit: forced
       })
       isSubmitting.value = false
       isSubmitted.value = true
@@ -1139,10 +1140,11 @@ const submitExam = async (forced = false) => {
   isSubmitting.value = false
   const status = lastError?.response?.status
   if (status === 401) {
-    toastError('Session expired. Please log in again.')
+    toastError(lang.value === 'kh' ? 'សម័យប្រឡងបានផុតកំណត់ សូមចូលគណនីម្តងទៀត' : 'Session expired. Please log in again.')
     router.push('/login')
   } else {
-    toastError('Failed to submit exam. Please check your connection and retry.')
+    const errorMsg = lastError?.response?.data?.message || (lang.value === 'kh' ? 'មិនអាចប្រគល់វិញ្ញាសាបានទេ សូមពិនិត្យការតភ្ជាប់អ៊ីនធឺណិត ហើយព្យាយាមម្តងទៀត' : 'Failed to submit exam. Please check your connection and retry.')
+    toastError(errorMsg)
   }
 }
 
@@ -1243,7 +1245,7 @@ useRealtimeSync(async () => {
       }
     } catch (e) {}
   }
-}, 2000)
+}, 20000)
 
 onMounted(() => {
   loadExam()

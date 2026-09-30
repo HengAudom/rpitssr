@@ -817,7 +817,7 @@ useRealtimeSync(() => {
     loadSessions()
     loadDaysYears()
   }
-}, 4000)
+}, 30000)
 
 onMounted(async () => {
   try {
