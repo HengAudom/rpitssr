@@ -17,6 +17,7 @@ class Test extends Model
         'TotalMarks',
         'PassScore',
         'RandomizeQuestions',
+        'RandomizeAnswers',
         'ExamDay',
         'AcademicYear',
         'ScheduledAt',
@@ -28,6 +29,7 @@ class Test extends Model
         'ScheduledAt' => 'datetime',
         'FinishedAt' => 'datetime',
         'RandomizeQuestions' => 'boolean',
+        'RandomizeAnswers' => 'boolean',
     ];
 
     public function session()

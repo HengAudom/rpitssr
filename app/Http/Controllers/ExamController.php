@@ -99,7 +99,7 @@ class ExamController extends Controller
             $rawQuestions = $examples->concat($nonExamples);
         }
 
-        $questions = $rawQuestions->map(function ($question) use ($submission) {
+        $questions = $rawQuestions->map(function ($question) use ($submission, $test, $student) {
             $isExample = (bool)($question->IsExample || preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($question->QuestionText)));
             $defaultAnswerId = null;
             if ($isExample) {
@@ -121,13 +121,22 @@ class ExamController extends Controller
                 }
             }
 
+            $rawAnswers = $question->answers;
+            if ((bool)$test->RandomizeAnswers && !$isExample) {
+                $ansSeed = ((int)($submission?->SubmissionId ?? $student->StudentId) * 10000) + (int)$question->QuestionId;
+                mt_srand($ansSeed);
+                $rawAnswers = $rawAnswers->values()->sortBy(function () {
+                    return mt_rand();
+                })->values();
+            }
+
             return [
                 'id' => $question->QuestionId,
                 'text' => $question->QuestionText,
                 'passage' => $question->Passage,
                 'isExample' => $isExample,
                 'defaultAnswerId' => $defaultAnswerId,
-                'answers' => $question->answers->map(fn($a) => [
+                'answers' => $rawAnswers->map(fn($a) => [
                     'id' => $a->AnswerId,
                     'text' => $a->AnswerText,
                 ])->values(),
@@ -174,6 +183,7 @@ class ExamController extends Controller
             'totalMarks' => $test->TotalMarks,
             'passScore' => $test->PassScore ?? 50,
             'randomizeQuestions' => (bool)$test->RandomizeQuestions,
+            'randomizeAnswers' => (bool)$test->RandomizeAnswers,
             'scheduledAt' => $test->ScheduledAt,
             'finishedAt' => $test->FinishedAt,
             'isStarted' => (bool) $existing,

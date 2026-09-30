@@ -100,6 +100,24 @@
               <tr v-for="test in paginatedTests" :key="test.id" class="hover:bg-slate-50/80 transition-colors">
                 <td class="px-4 py-3.5 font-bold text-slate-900 leading-snug">
                   <div>{{ test.name }}</div>
+                  <div v-if="test.randomizeQuestions || test.randomizeAnswers" class="flex items-center gap-1.5 flex-wrap mt-1">
+                    <span
+                      v-if="test.randomizeQuestions"
+                      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60"
+                      :title="lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Randomize Questions'"
+                    >
+                      <span class="material-symbols-outlined text-[11px] text-blue-600">shuffle</span>
+                      {{ lang === 'kh' ? 'ចៃដន្យសំណួរ' : 'Shuffle Qs' }}
+                    </span>
+                    <span
+                      v-if="test.randomizeAnswers"
+                      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60"
+                      :title="lang === 'kh' ? 'ចម្លើយចៃដន្យ' : 'Randomize Answers'"
+                    >
+                      <span class="material-symbols-outlined text-[11px] text-indigo-600">format_list_bulleted</span>
+                      {{ lang === 'kh' ? 'ចៃដន្យចម្លើយ' : 'Shuffle Answers' }}
+                    </span>
+                  </div>
                   <div v-if="test.scheduledAt" class="text-xs text-slate-400 font-normal mt-0.5">
                     {{ formatDateTime(test.scheduledAt) }}
                   </div>
@@ -226,6 +244,22 @@
                 <h4 class="font-bold text-slate-900 text-sm leading-snug break-words">
                   {{ test.name }}
                 </h4>
+                <div v-if="test.randomizeQuestions || test.randomizeAnswers" class="flex items-center gap-1.5 flex-wrap mt-1">
+                  <span
+                    v-if="test.randomizeQuestions"
+                    class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60"
+                  >
+                    <span class="material-symbols-outlined text-[11px] text-blue-600">shuffle</span>
+                    {{ lang === 'kh' ? 'ចៃដន្យសំណួរ' : 'Shuffle Qs' }}
+                  </span>
+                  <span
+                    v-if="test.randomizeAnswers"
+                    class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60"
+                  >
+                    <span class="material-symbols-outlined text-[11px] text-indigo-600">format_list_bulleted</span>
+                    {{ lang === 'kh' ? 'ចៃដន្យចម្លើយ' : 'Shuffle Answers' }}
+                  </span>
+                </div>
                 <div v-if="test.scheduledAt" class="text-[11px] text-slate-400 mt-0.5">
                   {{ formatDateTime(test.scheduledAt) }}
                 </div>
@@ -903,8 +937,8 @@
               </div>
             </div>
 
-            <!-- Pass Score & Randomize Questions -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <!-- Pass Score -->
+            <div>
               <Input
                 v-model.number="passScore"
                 type="number"
@@ -912,6 +946,10 @@
                 :label="lang === 'kh' ? 'ពិន្ទុជាប់ (Pass Score)' : 'Pass Score'"
                 placeholder="50"
               />
+            </div>
+
+            <!-- Randomize Questions & Randomize Answers Switches -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div class="space-y-1">
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">
                   {{ lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Randomize Questions' }}
@@ -921,6 +959,19 @@
                   <label class="relative inline-flex items-center cursor-pointer shrink-0">
                     <input type="checkbox" v-model="randomizeQuestions" class="sr-only peer">
                     <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              <div class="space-y-1">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                  {{ lang === 'kh' ? 'ចម្លើយចៃដន្យ' : 'Randomize Answers' }}
+                </label>
+                <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200">
+                  <span class="text-xs font-medium text-slate-700">{{ randomizeAnswers ? (lang === 'kh' ? 'បើក (On)' : 'Enabled') : (lang === 'kh' ? 'បិទ (Off)' : 'Disabled') }}</span>
+                  <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input type="checkbox" v-model="randomizeAnswers" class="sr-only peer">
+                    <div class="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-600"></div>
                   </label>
                 </div>
               </div>
@@ -944,6 +995,12 @@
                 <span class="text-slate-600">{{ lang === 'kh' ? 'ចៃដន្យសំណួរ' : 'Randomize Questions' }}:</span>
                 <strong class="font-bold text-xs" :class="randomizeQuestions ? 'text-blue-700' : 'text-slate-500'">
                   {{ randomizeQuestions ? (lang === 'kh' ? 'បើក' : 'Yes') : (lang === 'kh' ? 'បិទ' : 'No') }}
+                </strong>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-600">{{ lang === 'kh' ? 'ចៃដន្យចម្លើយ' : 'Randomize Answers' }}:</span>
+                <strong class="font-bold text-xs" :class="randomizeAnswers ? 'text-indigo-700' : 'text-slate-500'">
+                  {{ randomizeAnswers ? (lang === 'kh' ? 'បើក' : 'Yes') : (lang === 'kh' ? 'បិទ' : 'No') }}
                 </strong>
               </div>
               <div class="flex items-center justify-between">
@@ -1445,6 +1502,7 @@ const durationMinutes = ref(45)
 const totalMarks = ref(0)
 const passScore = ref(50)
 const randomizeQuestions = ref(false)
+const randomizeAnswers = ref(false)
 const scheduledAt = ref('')
 const finishedAt = ref('')
 const questions = ref([])
@@ -1796,6 +1854,7 @@ const openCreateBuilder = async () => {
   totalMarks.value = 1
   passScore.value = 50
   randomizeQuestions.value = false
+  randomizeAnswers.value = false
   scheduledAt.value = ''
   finishedAt.value = ''
   questions.value = []
@@ -1823,6 +1882,7 @@ const editTest = async (test) => {
     totalMarks.value = tData.totalMarks
     passScore.value = tData.passScore ?? 50
     randomizeQuestions.value = Boolean(tData.randomizeQuestions)
+    randomizeAnswers.value = Boolean(tData.randomizeAnswers)
     scheduledAt.value = tData.scheduledAt ? tData.scheduledAt.replace(' ', 'T').substring(0, 16) : ''
     finishedAt.value = tData.finishedAt ? tData.finishedAt.replace(' ', 'T').substring(0, 16) : ''
 
@@ -1947,6 +2007,7 @@ const handleSaveTest = async (status = 'Published') => {
       totalMarks: calculatedTotalMarks.value || 1,
       passScore: passScore.value != null ? Number(passScore.value) : 50,
       randomizeQuestions: Boolean(randomizeQuestions.value),
+      randomizeAnswers: Boolean(randomizeAnswers.value),
       scheduledAt: scheduledAt.value ? scheduledAt.value.replace('T', ' ') + ':00' : null,
       finishedAt: finishedAt.value ? finishedAt.value.replace('T', ' ') + ':00' : null,
       status: status,
@@ -2076,6 +2137,7 @@ const exportTestToExcel = async (test) => {
       ['ពិន្ទុសរុប (Total Marks):', tData.totalMarks || 0],
       ['ពិន្ទុជាប់ (Pass Score):', `${tData.passScore ?? 50}%`],
       ['ចៃដន្យសំណួរ (Randomize Questions):', tData.randomizeQuestions ? 'បាទ/ចាស (Yes)' : 'ទេ (No)'],
+      ['ចៃដន្យចម្លើយ (Randomize Answers):', tData.randomizeAnswers ? 'បាទ/ចាស (Yes)' : 'ទេ (No)'],
       [],
       ['ល.រ (No.)', 'ខ្លឹមសារសំណួរ (Question)', 'អត្ថបទ (Passage)', 'ពិន្ទុ (Points)', 'ជម្រើស ក (A)', 'ជម្រើស ខ (B)', 'ជម្រើស គ (C)', 'ជម្រើស ឃ (D)', 'ចម្លើយត្រឹមត្រូវ (Answer)']
     ]

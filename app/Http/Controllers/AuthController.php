@@ -429,6 +429,7 @@ class AuthController extends Controller
                     't.TotalMarks as totalMarks',
                     't.PassScore as passScore',
                     't.RandomizeQuestions as randomizeQuestions',
+                    't.RandomizeAnswers as randomizeAnswers',
                     't.ScheduledAt as scheduledAt',
                     't.FinishedAt as finishedAt',
                     't.Status as status'
@@ -472,6 +473,7 @@ class AuthController extends Controller
                         'totalMarks' => $t->totalMarks,
                         'passScore' => $t->passScore ?? 50,
                         'randomizeQuestions' => (bool)$t->randomizeQuestions,
+                        'randomizeAnswers' => (bool)$t->randomizeAnswers,
                         'scheduledAt' => $t->scheduledAt,
                         'finishedAt' => $t->finishedAt,
                         'status' => $t->status,
