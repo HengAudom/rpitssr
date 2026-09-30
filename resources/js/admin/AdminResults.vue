@@ -1058,10 +1058,10 @@ const executeExportExcel = () => {
             'វេនប្រឡង (Exam Shift)': subIdx === 0 ? s.sessionName : '',
             'កាលវិភាគថ្ងៃ (Exam Day)': subIdx === 0 ? s.examDay : '',
             'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': `${sub.testName}: ${sub.score}/${sub.totalMarks}`,
-            'ពិន្ទុ (Score)': `${sub.score} / ${sub.totalMarks}`,
+            'ពិន្ទុ (Score)': sub.score,
             'អត្រាត្រឹមត្រូវ (Accuracy)': `${sub.accuracy}%`,
             'លទ្ធផល (Result)': sub.isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
-            'ពិន្ទុសរុបគ្រប់មុខ (Total Score)': subIdx === 0 ? `${s.totalScore} / ${s.totalMaxMarks}` : '',
+            'ពិន្ទុសរុបគ្រប់មុខ (Total Score)': subIdx === 0 ? s.totalScore : '',
             'មធ្យមភាគ (Average Score)': subIdx === 0 ? s.averageScore : '',
             'លទ្ធផលរួម (Overall Result)': subIdx === 0 ? overallResultText : '',
             'កាលបរិច្ឆេទ (Date)': formatDate(sub.completedAt || s.examDate)
@@ -1101,7 +1101,7 @@ const executeExportExcel = () => {
         'វេនប្រឡង (Exam Shift)': r.sessionName || '-',
         'កាលវិភាគថ្ងៃ (Exam Day)': cleanDay,
         'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': r.testName || '-',
-        'ពិន្ទុ (Score)': `${r.score} / ${r.totalMarks}`,
+        'ពិន្ទុ (Score)': r.score,
         'អត្រាត្រឹមត្រូវ (Accuracy)': `${r.accuracy || 0}%`,
         'លទ្ធផល (Result)': isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
         'កាលបរិច្ឆេទ (Date)': formatDate(r.completedAt || r.examDate)
@@ -1127,6 +1127,47 @@ const executeExportExcel = () => {
   ws['!cols'] = colWidths
   if (merges.length > 0) {
     ws['!merges'] = merges
+  }
+
+  // Inject real Excel formulas into cells for Student mode
+  if (exportViewMode.value === 'student') {
+    let studentRow = 1 // Row 0 is header
+    exportGroupedStudents.value.forEach((s) => {
+      const subCount = s.submissions && s.submissions.length ? s.submissions.length : 1
+      const startR = studentRow
+      const endR = studentRow + subCount - 1
+      const excelStart = startR + 1 // 1-based row number in Excel
+      const excelEnd = endR + 1
+
+      if (s.submissions && s.submissions.length) {
+        // 1. Column K (Total Score): =SUM(H2:H4) or =H2
+        const cellRefK = XLSX.utils.encode_cell({ r: startR, c: 10 })
+        if (ws[cellRefK]) {
+          ws[cellRefK].t = 'n'
+          ws[cellRefK].v = s.totalScore
+          ws[cellRefK].f = subCount > 1 ? `SUM(H${excelStart}:H${excelEnd})` : `H${excelStart}`
+        }
+
+        // 2. Column L (Average Score): =ROUND(K2 / divisor, 2)
+        const cellRefL = XLSX.utils.encode_cell({ r: startR, c: 11 })
+        if (ws[cellRefL]) {
+          ws[cellRefL].t = 'n'
+          ws[cellRefL].v = s.averageScore
+          ws[cellRefL].f = `ROUND(K${excelStart}/${s.divisor}, 2)`
+          ws[cellRefL].z = '0.00'
+        }
+
+        // 3. Column M (Overall Result): =IF(L2 >= passThreshold, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")
+        const cellRefM = XLSX.utils.encode_cell({ r: startR, c: 12 })
+        if (ws[cellRefM]) {
+          ws[cellRefM].t = 's'
+          ws[cellRefM].v = s.isOverallPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)'
+          ws[cellRefM].f = `IF(L${excelStart}>=${s.passThreshold}, "ជាប់ (Pass)", "ធ្លាក់ (Fail)")`
+        }
+      }
+
+      studentRow += subCount
+    })
   }
 
   // Apply rich styling with xlsx-js-style
