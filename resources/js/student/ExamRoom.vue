@@ -441,7 +441,7 @@
                   </span>
 
                   <!-- Option Text -->
-                  <span class="flex-1 text-xs sm:text-sm font-semibold text-slate-800 leading-snug" v-html="renderMath(answer.text)"></span>
+                  <span class="flex-1 text-xs sm:text-sm font-medium text-slate-800 leading-snug" v-html="renderMath(answer.text)"></span>
 
                   <!-- Selected Indicator -->
                   <template v-if="selectedAnswers[currentIndex] === answer.id">
@@ -549,7 +549,7 @@
                 </span>
 
                 <!-- Option Text -->
-                <span class="flex-1 text-sm sm:text-base font-semibold text-slate-800 leading-snug" v-html="renderMath(answer.text)"></span>
+                <span class="flex-1 text-sm sm:text-base font-medium text-slate-800 leading-snug" v-html="renderMath(answer.text)"></span>
 
                 <!-- Selected Indicator -->
                 <template v-if="selectedAnswers[currentIndex] === answer.id">

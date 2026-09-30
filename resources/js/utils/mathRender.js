@@ -35,19 +35,25 @@ export function renderMath(rawText) {
     return text
   }
 
-  // 2. If entire string is a standalone LaTeX formula without $ (like in option inputs)
-  if (/\\(?:frac|sqrt|int|sum|prod|pi|alpha|beta|gamma|theta|lambda|sigma|partial|infty|approx|times|div|pm|ne|le|ge|in|subset|forall|exists|mathbb|mathbf|mathcal|sin|cos|tan|cot|ln|log)/.test(text) || /\^[0-9a-zA-Z\{\(]|_[0-9a-zA-Z\{\(]/.test(text)) {
-    // Check if it's purely a formula or contains Khmer text
-    const hasKhmer = /[\u1780-\u17FF]/.test(text)
-    if (!hasKhmer) {
-      try {
-        return katex.renderToString(text.trim(), { displayMode: false, throwOnError: false })
-      } catch (e) {
-        // fallback to token replacement
-      }
-    }
+  // 2. If entire string is a standalone LaTeX formula or algebraic equation without $ (like in option inputs)
+  const hasKhmer = /[\u1780-\u17FF]/.test(text)
+  const isEquation = !hasKhmer && (
+    /\\(?:frac|sqrt|int|sum|prod|pi|alpha|beta|gamma|theta|lambda|sigma|partial|infty|approx|times|div|pm|ne|le|ge|in|subset|forall|exists|mathbb|mathbf|mathcal|sin|cos|tan|cot|ln|log)/.test(text) ||
+    /\^[0-9a-zA-Z\{\(]|_[0-9a-zA-Z\{\(]/.test(text) ||
+    /^[A-Za-z]\s*=\s*[A-Za-z0-9\s\+\-\*\/\(\)\.\^\_\\]+$/.test(text.trim()) ||
+    /^[0-9a-zA-Z\s\(\)\.\,\+\-\*\/\^\\\_]+\s*=\s*[0-9a-zA-Z\s\(\)\.\,\+\-\*\/\^\\\_]+$/.test(text.trim())
+  )
 
-    // If mixed with Khmer text, find and replace LaTeX segments
+  if (isEquation) {
+    try {
+      return katex.renderToString(text.trim(), { displayMode: false, throwOnError: false })
+    } catch (e) {
+      // fallback to token replacement
+    }
+  }
+
+  // 3. If mixed with Khmer text, find and replace LaTeX segments
+  if (hasKhmer && (/\\|\^|\_/.test(text))) {
     text = text.replace(/(\\(?:frac\{[^{}]+\}\{[^{}]+\}|sqrt(?:\[[^{}]+\])?\{[^{}]+\}|int|sin|cos|tan|cot|ln|log|pi|in|mathbb\{[A-Z]\}|times|div|ne|forall|exists|approx|pm|[a-zA-Z0-9\(\)\+\-\=\/\^\_\s\.\,\{\}\[\]\\]+)+)/g, (match) => {
       const trimmed = match.trim()
       if (trimmed && /\\|\^|\_/.test(trimmed)) {
