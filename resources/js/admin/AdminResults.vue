@@ -912,12 +912,30 @@ const executeExportExcel = () => {
 
   let exportData = []
   let colWidths = []
+  const merges = []
 
   if (exportViewMode.value === 'student') {
     const grouped = exportGroupedStudents.value
     exportData = []
+    let currentRow = 1 // Row 0 is header
 
     grouped.forEach((s, studentIdx) => {
+      const subCount = s.submissions && s.submissions.length ? s.submissions.length : 1
+      const startR = currentRow
+      const endR = currentRow + subCount - 1
+
+      if (subCount > 1) {
+        // Merge candidate columns vertically across all exam rows
+        merges.push({ s: { r: startR, c: 0 }, e: { r: endR, c: 0 } }) // No.
+        merges.push({ s: { r: startR, c: 1 }, e: { r: endR, c: 1 } }) // Student Name
+        merges.push({ s: { r: startR, c: 2 }, e: { r: endR, c: 2 } }) // Student ID
+        merges.push({ s: { r: startR, c: 3 }, e: { r: endR, c: 3 } }) // Academic Year
+        merges.push({ s: { r: startR, c: 4 }, e: { r: endR, c: 4 } }) // Exam Shift
+        merges.push({ s: { r: startR, c: 5 }, e: { r: endR, c: 5 } }) // Exam Day
+        merges.push({ s: { r: startR, c: 10 }, e: { r: endR, c: 10 } }) // Total Score
+        merges.push({ s: { r: startR, c: 11 }, e: { r: endR, c: 11 } }) // Overall Result
+      }
+
       if (!s.submissions || !s.submissions.length) {
         exportData.push({
           'ល.រ (No.)': studentIdx + 1,
@@ -926,7 +944,7 @@ const executeExportExcel = () => {
           'ឆ្នាំសិក្សា (Academic Year)': s.academicYear,
           'វេនប្រឡង (Exam Shift)': s.sessionName,
           'កាលវិភាគថ្ងៃ (Exam Day)': s.examDay,
-          'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង': '-',
+          'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': '-',
           'ពិន្ទុ (Score)': '-',
           'អត្រាត្រឹមត្រូវ (Accuracy)': '-',
           'លទ្ធផល (Result)': '-',
@@ -935,24 +953,26 @@ const executeExportExcel = () => {
           'កាលបរិច្ឆេទ (Date)': formatDate(s.examDate)
         })
       } else {
-        s.submissions.forEach((sub) => {
+        s.submissions.forEach((sub, subIdx) => {
           exportData.push({
-            'ល.រ (No.)': studentIdx + 1,
-            'ឈ្មោះសិស្ស (Student Name)': s.studentName,
-            'អត្តលេខ (Student ID)': s.studentCode,
-            'ឆ្នាំសិក្សា (Academic Year)': s.academicYear,
-            'វេនប្រឡង (Exam Shift)': s.sessionName,
-            'កាលវិភាគថ្ងៃ (Exam Day)': s.examDay,
-            'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង': sub.testName || '-',
+            'ល.រ (No.)': subIdx === 0 ? studentIdx + 1 : '',
+            'ឈ្មោះសិស្ស (Student Name)': subIdx === 0 ? s.studentName : '',
+            'អត្តលេខ (Student ID)': subIdx === 0 ? s.studentCode : '',
+            'ឆ្នាំសិក្សា (Academic Year)': subIdx === 0 ? s.academicYear : '',
+            'វេនប្រឡង (Exam Shift)': subIdx === 0 ? s.sessionName : '',
+            'កាលវិភាគថ្ងៃ (Exam Day)': subIdx === 0 ? s.examDay : '',
+            'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': `${sub.testName}: ${sub.score}/${sub.totalMarks}`,
             'ពិន្ទុ (Score)': `${sub.score} / ${sub.totalMarks}`,
             'អត្រាត្រឹមត្រូវ (Accuracy)': `${sub.accuracy}%`,
             'លទ្ធផល (Result)': sub.isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
-            'ពិន្ទុសរុបគ្រប់មុខ (Total Score)': `${s.totalScore} / ${s.totalMaxMarks}`,
-            'លទ្ធផលរួម (Overall Result)': s.allPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
+            'ពិន្ទុសរុបគ្រប់មុខ (Total Score)': subIdx === 0 ? `${s.totalScore} / ${s.totalMaxMarks}` : '',
+            'លទ្ធផលរួម (Overall Result)': subIdx === 0 ? (s.allPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)') : '',
             'កាលបរិច្ឆេទ (Date)': formatDate(sub.completedAt || s.examDate)
           })
         })
       }
+
+      currentRow += subCount
     })
 
     colWidths = [
@@ -962,7 +982,7 @@ const executeExportExcel = () => {
       { wch: 16 }, // Academic Year
       { wch: 24 }, // Shift
       { wch: 16 }, // Day
-      { wch: 34 }, // មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង
+      { wch: 45 }, // មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)
       { wch: 16 }, // Score
       { wch: 16 }, // Accuracy
       { wch: 16 }, // Result
@@ -982,7 +1002,7 @@ const executeExportExcel = () => {
         'ឆ្នាំសិក្សា (Academic Year)': r.academicYear || r.years || '-',
         'វេនប្រឡង (Exam Shift)': r.sessionName || '-',
         'កាលវិភាគថ្ងៃ (Exam Day)': cleanDay,
-        'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង': r.testName || '-',
+        'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': r.testName || '-',
         'ពិន្ទុ (Score)': `${r.score} / ${r.totalMarks}`,
         'អត្រាត្រឹមត្រូវ (Accuracy)': `${r.accuracy || 0}%`,
         'លទ្ធផល (Result)': isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
@@ -1007,17 +1027,23 @@ const executeExportExcel = () => {
 
   const ws = XLSX.utils.json_to_sheet(exportData)
   ws['!cols'] = colWidths
+  if (merges.length > 0) {
+    ws['!merges'] = merges
+  }
+
   const wb = XLSX.utils.book_new()
   const sheetTitle = exportViewMode.value === 'student' ? 'Student Exam Summary' : 'Exam Submissions'
   XLSX.utils.book_append_sheet(wb, ws, sheetTitle)
 
-  const dateStr = new Date().toISOString().split('T')[0]
+  const now = new Date()
+  const dateStr = now.toISOString().split('T')[0]
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
   const yearTag = exportYear.value ? `${exportYear.value.replace(/[^a-zA-Z0-9_-]/g, '_')}_` : ''
   const shiftObj = sessions.value.find(s => String(s.SessionId) === String(exportSession.value))
   const shiftTag = shiftObj ? `${(shiftObj.SessionName || 'Shift').replace(/[^a-zA-Z0-9\u1780-\u17FF_-]/g, '_')}_` : ''
   const modeTag = exportViewMode.value === 'student' ? 'Summary_' : 'Detail_'
 
-  XLSX.writeFile(wb, `Exam_Results_${modeTag}${yearTag}${shiftTag}${dateStr}.xlsx`)
+  XLSX.writeFile(wb, `Exam_Results_${modeTag}${yearTag}${shiftTag}${dateStr}_${timeStr}.xlsx`)
   showExportModal.value = false
   toastSuccess(lang.value === 'kh' ? 'បាននាំចេញទិន្នន័យជា Excel ដោយជោគជ័យ' : 'Results exported to Excel successfully')
 }
@@ -1052,7 +1078,7 @@ const executeExportPDF = () => {
         <th>${lang.value === 'kh' ? 'ឈ្មោះសិស្ស (Student Name)' : 'Student Name'}</th>
         <th style="text-align: center;">${lang.value === 'kh' ? 'ឆ្នាំសិក្សា (Year)' : 'Academic Year'}</th>
         <th>${lang.value === 'kh' ? 'វេនប្រឡង (Exam Shift)' : 'Exam Shift'}</th>
-        <th>${lang.value === 'kh' ? 'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exam Subject)' : 'Exam Subject'}</th>
+        <th>${lang.value === 'kh' ? 'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)' : 'Exams Taken & Scores'}</th>
         <th style="text-align: center;">${lang.value === 'kh' ? 'ពិន្ទុ (Score)' : 'Score'}</th>
         <th style="text-align: center;">${lang.value === 'kh' ? 'លទ្ធផល' : 'Result'}</th>
         <th style="text-align: center;">${lang.value === 'kh' ? 'ពិន្ទុសរុបគ្រប់មុខ' : 'Total Score'}</th>
@@ -1088,45 +1114,64 @@ const executeExportPDF = () => {
           </tr>
         `)
       } else {
-        s.submissions.forEach((sub) => {
-          rowItems.push(`
-            <tr style="${bg}">
-              <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">${sIdx + 1}</td>
-              <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">
-                <div style="font-weight: bold; color: #0f172a; font-size: 12px;">${s.studentName}</div>
-                <div style="font-size: 11px; font-family: monospace; color: #2563eb;">${s.studentCode}</div>
-              </td>
-              <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-family: monospace; font-weight: bold; color: #1e3a8a;">
-                ${s.academicYear}
-              </td>
-              <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">
-                <div style="font-weight: 600;">${s.sessionName}</div>
-                ${s.examDay && s.examDay !== '-' ? `<div style="font-size: 10px; color: #0369a1;">${s.examDay}</div>` : ''}
-              </td>
-              <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: 600; color: #1e293b;">
-                ${sub.testName}
-              </td>
-              <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold; color: ${sub.isPassed ? '#166534' : '#991b1b'};">
-                ${sub.score} / ${sub.totalMarks}
-                <div style="font-size: 10px; font-weight: normal; color: #64748b;">${sub.accuracy}%</div>
-              </td>
-              <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">
-                <span style="display: inline-block; padding: 2px 6px; border-radius: 9999px; font-size: 10px; font-weight: bold; background-color: ${sub.isPassed ? '#dcfce7' : '#fee2e2'}; color: ${sub.isPassed ? '#166534' : '#991b1b'};">
-                  ${sub.isPassed ? (lang.value === 'kh' ? 'ជាប់' : 'Pass') : (lang.value === 'kh' ? 'ធ្លាក់' : 'Fail')}
-                </span>
-              </td>
-              <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 11px;">
-                ${s.totalScore} / ${s.totalMaxMarks}
-                <div style="font-size: 10px; font-weight: normal; color: #64748b;">${s.avgAccuracy}% (${s.examCount} ${lang.value === 'kh' ? 'វិញ្ញាសា' : 'tests'})</div>
-              </td>
-              <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">
-                <span style="display: inline-block; padding: 2px 6px; border-radius: 9999px; font-size: 10px; font-weight: bold; background-color: ${s.allPassed ? '#dcfce7' : '#fee2e2'}; color: ${s.allPassed ? '#166534' : '#991b1b'};">
-                  ${s.allPassed ? (lang.value === 'kh' ? 'ជាប់' : 'Pass') : (lang.value === 'kh' ? 'ធ្លាក់' : 'Fail')}
-                </span>
-              </td>
-              <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDate(sub.completedAt || s.examDate)}</td>
-            </tr>
-          `)
+        const span = s.submissions.length
+        s.submissions.forEach((sub, subIdx) => {
+          if (subIdx === 0) {
+            rowItems.push(`
+              <tr style="${bg}">
+                <td rowspan="${span}" style="text-align: center; vertical-align: middle; padding: 6px 8px; border: 1px solid #cbd5e1;">${sIdx + 1}</td>
+                <td rowspan="${span}" style="vertical-align: middle; padding: 6px 8px; border: 1px solid #cbd5e1;">
+                  <div style="font-weight: bold; color: #0f172a; font-size: 12px;">${s.studentName}</div>
+                  <div style="font-size: 11px; font-family: monospace; color: #2563eb;">${s.studentCode}</div>
+                </td>
+                <td rowspan="${span}" style="text-align: center; vertical-align: middle; padding: 6px 8px; border: 1px solid #cbd5e1; font-family: monospace; font-weight: bold; color: #1e3a8a;">
+                  ${s.academicYear}
+                </td>
+                <td rowspan="${span}" style="vertical-align: middle; padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">
+                  <div style="font-weight: 600;">${s.sessionName}</div>
+                  ${s.examDay && s.examDay !== '-' ? `<div style="font-size: 10px; color: #0369a1;">${s.examDay}</div>` : ''}
+                </td>
+                <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: 600; color: #1e293b;">
+                  ${sub.testName}: <span style="color: ${sub.isPassed ? '#166534' : '#991b1b'};">${sub.score}/${sub.totalMarks}</span>
+                </td>
+                <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold; color: ${sub.isPassed ? '#166534' : '#991b1b'};">
+                  ${sub.score} / ${sub.totalMarks}
+                </td>
+                <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">
+                  <span style="display: inline-block; padding: 2px 6px; border-radius: 9999px; font-size: 10px; font-weight: bold; background-color: ${sub.isPassed ? '#dcfce7' : '#fee2e2'}; color: ${sub.isPassed ? '#166534' : '#991b1b'};">
+                    ${sub.isPassed ? (lang.value === 'kh' ? 'ជាប់' : 'Pass') : (lang.value === 'kh' ? 'ធ្លាក់' : 'Fail')}
+                  </span>
+                </td>
+                <td rowspan="${span}" style="text-align: center; vertical-align: middle; padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 11px;">
+                  ${s.totalScore} / ${s.totalMaxMarks}
+                  <div style="font-size: 10px; font-weight: normal; color: #64748b;">${s.avgAccuracy}% (${s.examCount} ${lang.value === 'kh' ? 'វិញ្ញាសា' : 'tests'})</div>
+                </td>
+                <td rowspan="${span}" style="text-align: center; vertical-align: middle; padding: 6px 8px; border: 1px solid #cbd5e1;">
+                  <span style="display: inline-block; padding: 2px 6px; border-radius: 9999px; font-size: 10px; font-weight: bold; background-color: ${s.allPassed ? '#dcfce7' : '#fee2e2'}; color: ${s.allPassed ? '#166534' : '#991b1b'};">
+                    ${s.allPassed ? (lang.value === 'kh' ? 'ជាប់' : 'Pass') : (lang.value === 'kh' ? 'ធ្លាក់' : 'Fail')}
+                  </span>
+                </td>
+                <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDate(sub.completedAt || s.examDate)}</td>
+              </tr>
+            `)
+          } else {
+            rowItems.push(`
+              <tr style="${bg}">
+                <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: 600; color: #1e293b;">
+                  ${sub.testName}: <span style="color: ${sub.isPassed ? '#166534' : '#991b1b'};">${sub.score}/${sub.totalMarks}</span>
+                </td>
+                <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold; color: ${sub.isPassed ? '#166534' : '#991b1b'};">
+                  ${sub.score} / ${sub.totalMarks}
+                </td>
+                <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">
+                  <span style="display: inline-block; padding: 2px 6px; border-radius: 9999px; font-size: 10px; font-weight: bold; background-color: ${sub.isPassed ? '#dcfce7' : '#fee2e2'}; color: ${sub.isPassed ? '#166534' : '#991b1b'};">
+                    ${sub.isPassed ? (lang.value === 'kh' ? 'ជាប់' : 'Pass') : (lang.value === 'kh' ? 'ធ្លាក់' : 'Fail')}
+                  </span>
+                </td>
+                <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDate(sub.completedAt || s.examDate)}</td>
+              </tr>
+            `)
+          }
         })
       }
     })
