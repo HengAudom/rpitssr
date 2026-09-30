@@ -215,6 +215,8 @@
                       variant="ghost"
                       size="sm"
                       :title="t.edit"
+                      :loading="editingLoadingId === test.id"
+                      @mouseenter="prefetchTest(test)"
                       @click="editTest(test)"
                     />
                     <!-- Delete -->
@@ -367,6 +369,8 @@
                 size="xs"
                 icon="edit"
                 class="w-full justify-center text-[11px]"
+                :loading="editingLoadingId === test.id"
+                @mouseenter="prefetchTest(test)"
                 @click="editTest(test)"
               >
                 {{ t.edit }}
@@ -1571,6 +1575,7 @@ const exportingWordId = ref(null)
 const exportingTxtId = ref(null)
 const exportingExcelId = ref(null)
 const exportingPdfId = ref(null)
+const editingLoadingId = ref(null)
 
 const showDeleteDialog = ref(false)
 const testToDelete = ref(null)
@@ -1896,7 +1901,9 @@ useRealtimeSync(() => {
 const openCreateBuilder = async () => {
   editingTestId.value = null
   testName.value = ''
-  await loadData(true)
+  if (!sessions.value.length || !academicYears.value.length) {
+    await loadData(true)
+  }
   selectedSessionId.value = ''
   selectedExamDay.value = ''
   const defaultYear = academicYears.value.find(y => y.isDefault || y.status === 'Active')
@@ -1920,42 +1927,77 @@ const returnToLibrary = () => {
   loadData(true)
 }
 
-const editTest = async (test) => {
+const applyTestData = (tData) => {
+  editingTestId.value = tData.id
+  testName.value = tData.name
+  selectedSessionId.value = tData.sessionId || ''
+  selectedExamDay.value = tData.examDay || ''
+  selectedAcademicYear.value = tData.academicYear || ''
+  durationMinutes.value = tData.durationMinutes
+  totalMarks.value = tData.totalMarks
+  passScore.value = tData.passScore ?? 50
+  questionLimit.value = tData.questionLimit ? Number(tData.questionLimit) : null
+  randomizeQuestions.value = Boolean(tData.randomizeQuestions)
+  randomizeAnswers.value = Boolean(tData.randomizeAnswers)
+  scheduledAt.value = tData.scheduledAt ? tData.scheduledAt.replace(' ', 'T').substring(0, 16) : ''
+  finishedAt.value = tData.finishedAt ? tData.finishedAt.replace(' ', 'T').substring(0, 16) : ''
+
+  questions.value = (tData.questions || []).map(q => {
+    const correctIdx = q.answers.findIndex(a => a.correct)
+    return {
+      id: q.id,
+      text: q.text,
+      passage: q.passage || '',
+      isExample: !!q.isExample,
+      points: q.points || 1,
+      correctIndex: correctIdx >= 0 ? correctIdx : 0,
+      answers: q.answers.map(a => ({ id: a.id, text: a.text, correct: a.correct }))
+    }
+  })
+
+  activeQuestionIdx.value = 0
+  isBuilderMode.value = true
+}
+
+const prefetchTest = async (test) => {
+  if (!test?.id) return
+  const cacheKey = `test_detail_${test.id}`
+  if (fastCache.get(cacheKey)) return
   try {
-    await loadData(true)
+    const res = await axios.get(`/api/admin/tests/${test.id}`)
+    if (res.data?.test) {
+      fastCache.set(cacheKey, res.data.test)
+    }
+  } catch (e) {
+    // silent catch for prefetch
+  }
+}
+
+const editTest = async (test) => {
+  const cacheKey = `test_detail_${test.id}`
+  const cached = fastCache.get(cacheKey)
+
+  if (cached) {
+    applyTestData(cached)
+    // SWR background update to keep data fresh without blocking UI
+    axios.get(`/api/admin/tests/${test.id}`).then(res => {
+      if (res.data?.test) {
+        fastCache.set(cacheKey, res.data.test)
+      }
+    }).catch(() => {})
+    return
+  }
+
+  editingLoadingId.value = test.id
+  try {
     const res = await axios.get(`/api/admin/tests/${test.id}`)
     const tData = res.data.test
-    editingTestId.value = tData.id
-    testName.value = tData.name
-    selectedSessionId.value = tData.sessionId || ''
-    selectedExamDay.value = tData.examDay || ''
-    selectedAcademicYear.value = tData.academicYear || ''
-    durationMinutes.value = tData.durationMinutes
-    totalMarks.value = tData.totalMarks
-    passScore.value = tData.passScore ?? 50
-    questionLimit.value = tData.questionLimit ? Number(tData.questionLimit) : null
-    randomizeQuestions.value = Boolean(tData.randomizeQuestions)
-    randomizeAnswers.value = Boolean(tData.randomizeAnswers)
-    scheduledAt.value = tData.scheduledAt ? tData.scheduledAt.replace(' ', 'T').substring(0, 16) : ''
-    finishedAt.value = tData.finishedAt ? tData.finishedAt.replace(' ', 'T').substring(0, 16) : ''
-
-    questions.value = (tData.questions || []).map(q => {
-      const correctIdx = q.answers.findIndex(a => a.correct)
-      return {
-        id: q.id,
-        text: q.text,
-        passage: q.passage || '',
-        isExample: !!q.isExample,
-        points: q.points || 1,
-        correctIndex: correctIdx >= 0 ? correctIdx : 0,
-        answers: q.answers.map(a => ({ id: a.id, text: a.text, correct: a.correct }))
-      }
-    })
-
-    activeQuestionIdx.value = 0
-    isBuilderMode.value = true
+    fastCache.set(cacheKey, tData)
+    applyTestData(tData)
   } catch (e) {
     toastError(lang.value === 'kh' ? 'មិនអាចទាញយកសំណួរបានទេ' : 'Failed to load questions')
+  } finally {
+    editingLoadingId.value = null
   }
 }
 
@@ -2081,6 +2123,7 @@ const handleSaveTest = async (status = 'Published') => {
 
     if (editingTestId.value) {
       await axios.put(`/api/admin/tests/${editingTestId.value}`, payload)
+      fastCache.remove(`test_detail_${editingTestId.value}`)
       toastSuccess(lang.value === 'kh' ? 'បានកែប្រែការប្រឡងជោគជ័យ' : 'Exam updated successfully')
       logActivity('UPDATE_EXAM', `Updated exam: ${testName.value}`)
     } else {
@@ -2089,6 +2132,7 @@ const handleSaveTest = async (status = 'Published') => {
       logActivity('CREATE_EXAM', `Created exam: ${testName.value}`)
     }
 
+    fastCache.remove('tests')
     isBuilderMode.value = false
     notifyRealtimeChange('tests_updated')
     await loadData(true)
@@ -2116,6 +2160,8 @@ const performDeleteTest = async () => {
   deleting.value = true
   try {
     await axios.delete(`/api/admin/tests/${testToDelete.value.id}`)
+    fastCache.remove(`test_detail_${testToDelete.value.id}`)
+    fastCache.remove('tests')
     toastSuccess(lang.value === 'kh' ? 'បានលុបការប្រឡងជោគជ័យ' : 'Exam deleted successfully')
     logActivity('DELETE_EXAM', `Deleted exam: ${testToDelete.value.name}`)
     showDeleteDialog.value = false

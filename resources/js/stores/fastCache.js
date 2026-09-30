@@ -48,6 +48,11 @@ export const fastCache = {
     persistCache()
   },
 
+  remove(key) {
+    delete memoryCache[key]
+    persistCache()
+  },
+
   /**
    * Pre-warm all admin datasets simultaneously in the background.
    */
