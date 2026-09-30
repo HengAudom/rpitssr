@@ -115,8 +115,8 @@ class AuthController extends Controller
             ]);
         }
 
-        // Student pattern (numeric, or RTC-, or SR-) does not require password
-        if (preg_match('/^(?:rtc-|sr-|\d+$)/i', $identifier)) {
+        // Student pattern (RTC-, or SR-) does not require password
+        if (preg_match('/^(?:rtc-|sr-)/i', $identifier)) {
             return response()->json([
                 'status' => 'ok',
                 'requiresPassword' => false,
@@ -125,14 +125,9 @@ class AuthController extends Controller
 
         $clean = strtolower($identifier);
 
-        // Check if matches an admin username directly, by alias, or prefix
-        $isAdmin = Admin::whereRaw('LOWER(Username) = ?', [$clean])
-            ->orWhereRaw('LOWER(Username) LIKE ?', [$clean . '%'])
-            ->exists()
-            || in_array($clean, ['admin', 'superadmin', 'super admin', 'administrator', 'admindom', 'domadmin'])
-            || str_starts_with($clean, 'admin')
-            || str_starts_with($clean, 'super')
-            || str_starts_with($clean, 'dom');
+        // Only exact admin username or standard alias, NEVER partial prefix matching (Pentest Finding #5)
+        $isAdmin = in_array($clean, ['admin', 'superadmin', 'super admin', 'administrator', 'admindom', 'domadmin'])
+            || Admin::whereRaw('LOWER(Username) = ?', [$clean])->exists();
 
         return response()->json([
             'status' => 'ok',
@@ -237,30 +232,33 @@ class AuthController extends Controller
                 ]);
             }
 
-            // 2. Student lookup by StudentCode or StudentId in tblstudent
+            // 2. Student lookup strictly by assigned StudentCode (case-insensitive)
+            // Disallow matching numeric auto-increment primary keys to prevent account enumeration/takeover (Pentest Finding #1)
             $student = Student::with(['session'])
-                ->where(function ($q) use ($identifier) {
-                    $q->whereRaw('LOWER(StudentCode) = ?', [strtolower($identifier)]);
-                    if (is_numeric($identifier)) {
-                        $q->orWhere('StudentId', (int)$identifier);
-                    }
-                })
+                ->whereRaw('LOWER(StudentCode) = ?', [strtolower($identifier)])
                 ->first();
 
             if ($student) {
-                // If student has password in database
+                // If student has a password in database
                 if (!empty($student->Password)) {
                     if (empty($password) || !Hash::check($password, $student->Password)) {
+                        self::recordLoginAudit(
+                            userId: $student->StudentId,
+                            username: $student->StudentCode,
+                            role: 'Student',
+                            displayName: $student->name,
+                            status: 'Failed',
+                            details: 'Invalid password attempt for student account',
+                            request: $request
+                        );
                         return response()->json([
                             'message' => $lang === 'en' ? 'Invalid identifier or password.' : 'ឈ្មោះគណនី ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ'
                         ], 422);
                     }
                 } elseif (!empty($password) && trim((string)$password) !== '') {
-                    // Reject unexpected passwords to prevent authentication confusion (Pentest Finding #2)
+                    // Reject unexpected password with uniform error message to prevent account enumeration (Pentest Finding #2)
                     return response()->json([
-                        'message' => $lang === 'en'
-                            ? 'This candidate account logs in with Candidate/Student ID only (no password required).'
-                            : 'គណនីបេក្ខជននេះចូលប្រើតែ ID ប៉ុណ្ណោះ ដោយមិនត្រូវការ Password ឡើយ'
+                        'message' => $lang === 'en' ? 'Invalid identifier or password.' : 'ឈ្មោះគណនី ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ'
                     ], 422);
                 }
 
@@ -473,11 +471,6 @@ class AuthController extends Controller
                         'durationMinutes' => $t->durationMinutes,
                         'totalMarks' => $t->totalMarks,
                         'passScore' => $t->passScore ?? 50,
-                        'questionLimit' => $t->questionLimit ? (int)$t->questionLimit : null,
-                        'randomizeQuestions' => (bool)$t->randomizeQuestions,
-                        'randomizeAnswers' => (bool)$t->randomizeAnswers,
-                        'scheduledAt' => $t->scheduledAt,
-                        'finishedAt' => $t->finishedAt,
                         'status' => $t->status,
                         'isUpcoming' => $isUpcoming,
                         'isFinished' => $isFinished,
@@ -494,13 +487,23 @@ class AuthController extends Controller
             }
         }
 
-        $permsFile = storage_path('app/permissions.json');
-        $permissions = [];
-        if (file_exists($permsFile)) {
-            $permissions = json_decode(file_get_contents($permsFile), true) ?: [];
+        // Restrict admin permissions and internal system settings to administrators only (Pentest Finding #3)
+        if (!$student) {
+            $permsFile = storage_path('app/permissions.json');
+            $permissions = [];
+            if (file_exists($permsFile)) {
+                $permissions = json_decode(file_get_contents($permsFile), true) ?: [];
+            }
+            $payload['permissions'] = $permissions;
+            $payload['settings'] = AdminController::getSystemSettings();
+        } else {
+            $payload['permissions'] = [];
+            $settings = AdminController::getSystemSettings();
+            $payload['settings'] = [
+                'institution' => $settings['institution'] ?? 'RTC',
+                'academicYear' => $settings['academicYear'] ?? '2026-2027',
+            ];
         }
-        $payload['permissions'] = $permissions;
-        $payload['settings'] = AdminController::getSystemSettings();
 
         return response()->json($payload);
     }

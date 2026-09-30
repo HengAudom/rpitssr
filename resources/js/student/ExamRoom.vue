@@ -1197,7 +1197,7 @@ const loadExam = async () => {
   completedSubmissionId.value = null
 
   try {
-    const res = await axios.get(`/api/exam/${testId}/start`)
+    const res = await axios.post(`/api/exam/${testId}/start`)
     examData.value = res.data
     submissionId.value = res.data.submissionId
     interruptions.value = Number(res.data.interruptions || 0)

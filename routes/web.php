@@ -38,7 +38,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/profile/change-password', [AuthController::class, 'changePassword']);
 
     // ─── Exam (Student) ──────────────────────────────────────────────────────
-    Route::get('/api/exam/{testId}/start', [ExamController::class, 'start']);
+    Route::match(['get', 'post'], '/api/exam/{testId}/start', [ExamController::class, 'start']);
     Route::get('/api/exam/{submissionId}/status', [ExamController::class, 'checkStatus']);
     Route::post('/api/exam/answer', [ExamController::class, 'saveAnswer']);
     Route::post('/api/exam/interruption', [ExamController::class, 'recordInterruption']);
@@ -94,6 +94,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
 Route::middleware(['auth', 'super_admin'])->group(function () {
     Route::get('/api/admin/roles-permissions', [AdminController::class, 'rolesPermissions']);
     Route::post('/api/admin/roles-permissions', [AdminController::class, 'saveRolesPermissions']);
+});
+
+// ─── Block Internal Build Manifest from Direct Public Exposure (Finding #4) ───
+Route::get('/build/manifest.json', function () {
+    abort(404);
 });
 
 // ─── SPA Catch-all ────────────────────────────────────────────────────────────

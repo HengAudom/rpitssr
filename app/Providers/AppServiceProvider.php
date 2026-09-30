@@ -38,10 +38,10 @@ class AppServiceProvider extends ServiceProvider
             $identifier = (is_string($rawIdentifier) || is_numeric($rawIdentifier)) ? (string) $rawIdentifier : '';
             $safeIdentifier = strtolower(trim($identifier));
             return [
-                Limit::perMinute(15)->by($request->ip()),
-                Limit::perMinute(10)->by($safeIdentifier ?: $request->ip())->response(function () {
+                Limit::perMinute(20)->by($request->ip()),
+                Limit::perMinute(10)->by(($safeIdentifier ?: 'anon') . '|' . $request->ip())->response(function () {
                     return response()->json([
-                        'message' => 'Too many login attempts on this account. Please wait a moment before trying again.'
+                        'message' => 'Too many login attempts from this device. Please wait a moment before trying again.'
                     ], 429);
                 }),
             ];
