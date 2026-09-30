@@ -1222,9 +1222,27 @@ class AdminController extends Controller
                 }
 
                 if (now()->greaterThanOrEqualTo($deadline)) {
-                    $questions = $t->questions ?: collect();
+                    $assignedIds = !empty($sub->AssignedQuestionIds) ? (is_array($sub->AssignedQuestionIds) ? $sub->AssignedQuestionIds : json_decode($sub->AssignedQuestionIds, true)) : null;
+                    $allQuestions = $t->questions ?: collect();
+                    $bankCount = $allQuestions->count();
+
+                    if (is_array($assignedIds) && count($assignedIds) > 0) {
+                        $questions = $allQuestions->whereIn('QuestionId', $assignedIds);
+                    } elseif ($t->QuestionLimit && (int)$t->QuestionLimit > 0 && (int)$t->QuestionLimit < $bankCount) {
+                        $questions = $allQuestions->take((int)$t->QuestionLimit);
+                    } else {
+                        $questions = $allQuestions;
+                    }
                     $totalQuestions = $questions->count();
-                    $totalMarks = $t->TotalMarks ?: 100;
+                    $sumPoints = (float) $questions->sum('Points');
+                    $baseTotalMarks = (float) ($t->TotalMarks ?: 100);
+
+                    if ($t->QuestionLimit && (int)$t->QuestionLimit > 0 && $bankCount > 0 && (int)$t->QuestionLimit < $bankCount) {
+                        $totalMarks = $sumPoints > 0 ? $sumPoints : round(((int)$t->QuestionLimit / $bankCount) * $baseTotalMarks, 2);
+                    } else {
+                        $totalMarks = $sumPoints > 0 ? $sumPoints : $baseTotalMarks;
+                    }
+
                     $details = $sub->details ?: collect();
                     $correctCount = 0;
 
@@ -1287,6 +1305,8 @@ class AdminController extends Controller
                 't.AcademicYear as testAcademicYear',
                 't.TotalMarks as totalMarks',
                 't.PassScore as passScore',
+                't.QuestionLimit as questionLimit',
+                'ss.AssignedQuestionIds as assignedQuestionIds',
                 'ss.TotalCorrect as totalCorrect',
                 'ss.Score as score',
                 'ss.StartedAt as startedAt',
@@ -1298,14 +1318,50 @@ class AdminController extends Controller
                 'es.Years as years',
                 'es.ExamDate as examDate',
                 'es.StartTime as startTime',
-                'es.EndTime as endTime'
+                'es.EndTime as endTime',
+                DB::raw('(SELECT COUNT(*) FROM tblquestion WHERE tblquestion.TestId = t.TestId) as totalBankQuestions'),
+                DB::raw('(SELECT COALESCE(SUM(Points), COUNT(*)) FROM tblquestion WHERE tblquestion.TestId = t.TestId) as totalBankPoints')
             )
             ->orderByRaw('COALESCE(ss.CompletedAt, ss.StartedAt, ss.created_at) DESC')
             ->get()
             ->map(function ($r) use ($configuredExamDays) {
-                $accuracy = $r->totalMarks > 0
-                    ? round(($r->score / $r->totalMarks) * 100, 1)
-                    : 0;
+                $assignedIds = !empty($r->assignedQuestionIds)
+                    ? (is_array($r->assignedQuestionIds) ? $r->assignedQuestionIds : json_decode($r->assignedQuestionIds, true))
+                    : null;
+
+                $totalBankQuestions = (int) ($r->totalBankQuestions ?? 0);
+                $totalBankPoints = (float) ($r->totalBankPoints ?: ($r->totalMarks ?: 100));
+                $qLimit = ($r->questionLimit && (int)$r->questionLimit > 0) ? (int)$r->questionLimit : null;
+
+                $actualQuestions = (is_array($assignedIds) && count($assignedIds) > 0)
+                    ? count($assignedIds)
+                    : (($qLimit && $totalBankQuestions > 0 && $qLimit < $totalBankQuestions) ? $qLimit : $totalBankQuestions);
+
+                if ($qLimit && $totalBankQuestions > 0 && $qLimit < $totalBankQuestions) {
+                    $effectiveTotalMarks = round(($qLimit / $totalBankQuestions) * $totalBankPoints);
+                    if ($effectiveTotalMarks <= 0) {
+                        $effectiveTotalMarks = (float) $qLimit;
+                    }
+                } else {
+                    $effectiveTotalMarks = (float) ($r->totalMarks ?: $totalBankPoints);
+                }
+
+                $totalCorrect = (int) ($r->totalCorrect ?? 0);
+                $rawScore = (float) ($r->score ?? 0);
+
+                if ($actualQuestions > 0) {
+                    if ($rawScore > $effectiveTotalMarks || ($qLimit && $totalBankQuestions > 0 && $qLimit < $totalBankQuestions)) {
+                        $score = round(($totalCorrect / $actualQuestions) * $effectiveTotalMarks, 2);
+                    } else {
+                        $score = $rawScore;
+                    }
+                } else {
+                    $score = $rawScore;
+                }
+
+                $accuracy = $actualQuestions > 0
+                    ? round(($totalCorrect / $actualQuestions) * 100, 1)
+                    : ($effectiveTotalMarks > 0 ? round(($score / $effectiveTotalMarks) * 100, 1) : 0);
 
                 $dateObj = !empty($r->examDate) ? \Carbon\Carbon::parse($r->examDate) : (!empty($r->completedAt) ? \Carbon\Carbon::parse($r->completedAt) : (!empty($r->startedAt) ? \Carbon\Carbon::parse($r->startedAt) : now()));
                 
@@ -1321,6 +1377,9 @@ class AdminController extends Controller
                 $academicYear = $studentAy ?: ($testAy ?: ($sessionYears ?: $dateObj->format('Y')));
 
                 return array_merge((array) $r, [
+                    'score' => $score,
+                    'totalMarks' => $effectiveTotalMarks,
+                    'totalQuestions' => $actualQuestions,
                     'accuracy' => $accuracy,
                     'examDay' => $examDay,
                     'days' => $examDay,
@@ -1869,9 +1928,26 @@ class AdminController extends Controller
         }
 
         $test = $submission->test;
-        $totalMarks = $test ? $test->TotalMarks : 100;
-        $questions = $test ? $test->questions : collect();
+        $assignedIds = !empty($submission->AssignedQuestionIds) ? (is_array($submission->AssignedQuestionIds) ? $submission->AssignedQuestionIds : json_decode($submission->AssignedQuestionIds, true)) : null;
+        $allQuestions = $test ? $test->questions : collect();
+        $bankCount = $allQuestions->count();
+
+        if (is_array($assignedIds) && count($assignedIds) > 0) {
+            $questions = $allQuestions->whereIn('QuestionId', $assignedIds);
+        } elseif ($test && $test->QuestionLimit && (int)$test->QuestionLimit > 0 && (int)$test->QuestionLimit < $bankCount) {
+            $questions = $allQuestions->take((int)$test->QuestionLimit);
+        } else {
+            $questions = $allQuestions;
+        }
         $totalQuestions = $questions->count();
+        $sumPoints = (float) $questions->sum('Points');
+        $baseTotalMarks = (float) ($test ? ($test->TotalMarks ?: 100) : 100);
+
+        if ($test && $test->QuestionLimit && (int)$test->QuestionLimit > 0 && $bankCount > 0 && (int)$test->QuestionLimit < $bankCount) {
+            $totalMarks = $sumPoints > 0 ? $sumPoints : round(((int)$test->QuestionLimit / $bankCount) * $baseTotalMarks, 2);
+        } else {
+            $totalMarks = $sumPoints > 0 ? $sumPoints : $baseTotalMarks;
+        }
 
         $details = $submission->details;
         $correctCount = 0;

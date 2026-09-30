@@ -172,7 +172,7 @@
                     <span class="font-bold text-slate-800">{{ (test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0 }}</span> {{ lang === 'kh' ? 'សំណួរ' : 'qs' }}
                   </template>
                   <span class="text-slate-300 mx-1">·</span>
-                  <span class="font-bold text-blue-600">{{ test.totalMarks }}</span> {{ lang === 'kh' ? 'ពិន្ទុ' : 'pts' }}
+                  <span class="font-bold text-blue-600">{{ getEffectiveTotalMarks(test) }}</span> {{ lang === 'kh' ? 'ពិន្ទុ' : 'pts' }}
                 </td>
                 <td class="px-4 py-3.5">
                   <StatusBadge
@@ -329,7 +329,7 @@
                   <span class="font-bold text-slate-800">{{ (test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0 }}</span> {{ lang === 'kh' ? 'សំណួរ' : 'qs' }}
                 </template>
                 <span class="text-slate-300">·</span>
-                <span class="font-bold text-blue-600">{{ test.totalMarks }}</span> {{ lang === 'kh' ? 'ពិន្ទុ' : 'pts' }}
+                <span class="font-bold text-blue-600">{{ getEffectiveTotalMarks(test) }}</span> {{ lang === 'kh' ? 'ពិន្ទុ' : 'pts' }}
               </div>
             </div>
 
@@ -1815,8 +1815,34 @@ const currentEditingQuestion = computed(() => {
 })
 
 const calculatedTotalMarks = computed(() => {
-  return questions.value.reduce((sum, q) => sum + (parseInt(q.points) || 1), 0)
+  const qCount = questions.value.length
+  if (!qCount) return 0
+  const totalBankPoints = questions.value.reduce((sum, q) => sum + (parseInt(q.points) || 1), 0)
+  const limit = questionLimit.value ? parseInt(questionLimit.value) : null
+  if (limit && limit > 0 && limit < qCount) {
+    const firstPts = parseInt(questions.value[0]?.points) || 1
+    const allSame = questions.value.every(q => (parseInt(q.points) || 1) === firstPts)
+    if (allSame) {
+      return limit * firstPts
+    }
+    return Math.round((limit / qCount) * totalBankPoints)
+  }
+  return totalBankPoints
 })
+
+const getEffectiveTotalMarks = (test) => {
+  if (!test) return 0
+  const qCount = (test.questionCount != null ? test.questionCount : test.totalQuestions) ?? 0
+  const limit = test.questionLimit ? Number(test.questionLimit) : null
+  const total = Number(test.totalMarks) || 0
+  if (limit && limit > 0 && qCount > 0 && limit < qCount) {
+    if (total > limit) {
+      return Math.round((limit / qCount) * total)
+    }
+    return total > 0 ? total : limit
+  }
+  return total
+}
 
 const deleteConfirmMessage = computed(() => {
   if (!testToDelete.value) return ''

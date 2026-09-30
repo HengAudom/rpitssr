@@ -394,12 +394,19 @@ class ExamController extends Controller
             $test = Test::find($submission->TestId);
             $assignedIds = !empty($submission->AssignedQuestionIds) ? (is_array($submission->AssignedQuestionIds) ? $submission->AssignedQuestionIds : json_decode($submission->AssignedQuestionIds, true)) : null;
 
+            $bankQuestions = Question::where('TestId', $submission->TestId)->get();
+            $bankCount = $bankQuestions->count();
+
             if (is_array($assignedIds) && count($assignedIds) > 0) {
                 $totalQuestions = count($assignedIds);
+                $activeQuestions = $bankQuestions->whereIn('QuestionId', $assignedIds);
             } else {
-                $totalQuestions = Question::where('TestId', $submission->TestId)->count();
+                $totalQuestions = $bankCount;
                 if ($test && $test->QuestionLimit && (int)$test->QuestionLimit > 0 && (int)$test->QuestionLimit < $totalQuestions) {
                     $totalQuestions = (int)$test->QuestionLimit;
+                    $activeQuestions = $bankQuestions->take($totalQuestions);
+                } else {
+                    $activeQuestions = $bankQuestions;
                 }
             }
             $answeredCount = SubmissionDetail::where('SubmissionId', $submissionId)
@@ -417,7 +424,14 @@ class ExamController extends Controller
             }
 
             $totalCorrect = SubmissionDetail::where('SubmissionId', $submissionId)->where('IsCorrect', true)->count();
-            $totalMarks = $test ? (float) ($test->TotalMarks ?: 100.0) : 100.0;
+            $testTotalMarks = $test ? (float) ($test->TotalMarks ?: 100.0) : 100.0;
+            $sumActivePts = (float) $activeQuestions->sum('Points');
+
+            if ($test && $test->QuestionLimit && (int)$test->QuestionLimit > 0 && $bankCount > 0 && (int)$test->QuestionLimit < $bankCount) {
+                $totalMarks = $sumActivePts > 0 ? $sumActivePts : round(((int)$test->QuestionLimit / $bankCount) * $testTotalMarks, 2);
+            } else {
+                $totalMarks = $sumActivePts > 0 ? $sumActivePts : $testTotalMarks;
+            }
 
             $score = $totalQuestions > 0
                 ? round(($totalCorrect / $totalQuestions) * $totalMarks, 2)

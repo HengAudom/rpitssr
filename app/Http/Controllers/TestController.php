@@ -28,6 +28,13 @@ class TestController extends Controller
             ->get()
             ->map(function ($t) {
                 $qCount = (int)($t->questions_count ?? 0);
+                $qLimit = $t->QuestionLimit ? (int)$t->QuestionLimit : null;
+                $totalMarks = (float)$t->TotalMarks;
+                if ($qLimit && $qLimit > 0 && $qCount > 0 && $qLimit < $qCount) {
+                    if ($totalMarks > $qLimit) {
+                        $totalMarks = round(($qLimit / $qCount) * $totalMarks);
+                    }
+                }
                 return [
                     'id' => $t->TestId,
                     'name' => $t->TestName,
@@ -36,9 +43,9 @@ class TestController extends Controller
                     'examDay' => $t->ExamDay,
                     'academicYear' => $t->AcademicYear,
                     'durationMinutes' => $t->DurationMinutes,
-                    'totalMarks' => $t->TotalMarks,
+                    'totalMarks' => $totalMarks,
                     'passScore' => $t->PassScore ?? 50,
-                    'questionLimit' => $t->QuestionLimit ? (int)$t->QuestionLimit : null,
+                    'questionLimit' => $qLimit,
                     'randomizeQuestions' => (bool)$t->RandomizeQuestions,
                     'randomizeAnswers' => (bool)$t->RandomizeAnswers,
                     'totalQuestions' => $qCount,
@@ -91,6 +98,21 @@ class TestController extends Controller
         ]);
 
         DB::transaction(function () use ($data, $user) {
+            $savedTotalMarks = (float) $data['totalMarks'];
+            $qLimit = !empty($data['questionLimit']) ? (int)$data['questionLimit'] : null;
+            $qCount = count($data['questions'] ?? []);
+            if ($qLimit && $qLimit > 0 && $qCount > 0 && $qLimit < $qCount) {
+                $allPoints = array_map(fn($q) => (int)($q['points'] ?? 1), $data['questions']);
+                $firstPoint = $allPoints[0] ?? 1;
+                $allSame = count(array_filter($allPoints, fn($p) => $p === $firstPoint)) === count($allPoints);
+                if ($allSame) {
+                    $savedTotalMarks = $qLimit * $firstPoint;
+                } else {
+                    $sumPoints = array_sum($allPoints);
+                    $savedTotalMarks = round(($qLimit / $qCount) * $sumPoints);
+                }
+            }
+
             $test = Test::create([
                 'SessionId' => $data['sessionId'] ?? null,
                 'ExamDay' => $data['examDay'] ?? null,
@@ -98,9 +120,9 @@ class TestController extends Controller
                 'CreatedByUserId' => $user->AdminId ?? $user->id,
                 'TestName' => $data['name'],
                 'DurationMinutes' => $data['durationMinutes'],
-                'TotalMarks' => $data['totalMarks'],
+                'TotalMarks' => $savedTotalMarks,
                 'PassScore' => $data['passScore'] ?? 50,
-                'QuestionLimit' => !empty($data['questionLimit']) ? (int)$data['questionLimit'] : null,
+                'QuestionLimit' => $qLimit,
                 'RandomizeQuestions' => (bool)($data['randomizeQuestions'] ?? false),
                 'RandomizeAnswers' => (bool)($data['randomizeAnswers'] ?? false),
                 'ScheduledAt' => $data['scheduledAt'] ?? null,
@@ -255,15 +277,30 @@ class TestController extends Controller
         ]);
 
         DB::transaction(function () use ($data, $test) {
+            $savedTotalMarks = (float) $data['totalMarks'];
+            $qLimit = !empty($data['questionLimit']) ? (int)$data['questionLimit'] : null;
+            $qCount = count($data['questions'] ?? []);
+            if ($qLimit && $qLimit > 0 && $qCount > 0 && $qLimit < $qCount) {
+                $allPoints = array_map(fn($q) => (int)($q['points'] ?? 1), $data['questions']);
+                $firstPoint = $allPoints[0] ?? 1;
+                $allSame = count(array_filter($allPoints, fn($p) => $p === $firstPoint)) === count($allPoints);
+                if ($allSame) {
+                    $savedTotalMarks = $qLimit * $firstPoint;
+                } else {
+                    $sumPoints = array_sum($allPoints);
+                    $savedTotalMarks = round(($qLimit / $qCount) * $sumPoints);
+                }
+            }
+
             $test->update([
                 'SessionId' => $data['sessionId'] ?? null,
                 'ExamDay' => $data['examDay'] ?? null,
                 'AcademicYear' => $data['academicYear'] ?? null,
                 'TestName' => $data['name'],
                 'DurationMinutes' => $data['durationMinutes'],
-                'TotalMarks' => $data['totalMarks'],
+                'TotalMarks' => $savedTotalMarks,
                 'PassScore' => $data['passScore'] ?? 50,
-                'QuestionLimit' => !empty($data['questionLimit']) ? (int)$data['questionLimit'] : null,
+                'QuestionLimit' => $qLimit,
                 'RandomizeQuestions' => (bool)($data['randomizeQuestions'] ?? false),
                 'RandomizeAnswers' => (bool)($data['randomizeAnswers'] ?? false),
                 'ScheduledAt' => $data['scheduledAt'] ?? null,

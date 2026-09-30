@@ -136,13 +136,29 @@ class ResultController extends Controller
 
         $incorrect = max(0, $totalQuestions - $correct);
 
+        $testTotalMarks = (float) ($test?->TotalMarks ?: 100);
+        $sumActivePts = (float) $allQuestions->sum('Points');
+
+        if ($test && $test->QuestionLimit && (int)$test->QuestionLimit > 0 && $bankCount > 0 && (int)$test->QuestionLimit < $bankCount) {
+            $effectiveTotalMarks = $sumActivePts > 0 ? $sumActivePts : round(((int)$test->QuestionLimit / $bankCount) * $testTotalMarks, 2);
+        } else {
+            $effectiveTotalMarks = $sumActivePts > 0 ? $sumActivePts : $testTotalMarks;
+        }
+
+        $rawScore = (float) ($submission->Score ?? 0);
+        if ($totalQuestions > 0 && ($rawScore > $effectiveTotalMarks || ($test && $test->QuestionLimit && (int)$test->QuestionLimit < $bankCount))) {
+            $score = round(($correct / $totalQuestions) * $effectiveTotalMarks, 2);
+        } else {
+            $score = $rawScore;
+        }
+
         return response()->json([
             'submissionId'   => $submission->SubmissionId,
             'studentId'      => $submission->student ? ($submission->student->StudentCode ?? (string)$submission->student->StudentId) : 'N/A',
             'studentName'    => $submission->student ? ($submission->student->FirstName . ' ' . $submission->student->LastName) : 'N/A',
             'testName'       => $test?->TestName,
-            'totalMarks'     => $test?->TotalMarks,
-            'score'          => $submission->Score,
+            'totalMarks'     => $effectiveTotalMarks,
+            'score'          => $score,
             'totalCorrect'   => $correct,
             'totalQuestions' => $totalQuestions,
             'incorrect'      => $incorrect,
