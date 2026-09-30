@@ -409,6 +409,66 @@
           </div>
         </div>
 
+        <!-- Report View Mode Toggle (Student Consolidated vs Detailed) -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+            {{ lang === 'kh' ? 'ទម្រង់របាយការណ៍នាំចេញ' : 'Report Layout' }}
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              @click="exportViewMode = 'student'"
+              :class="[
+                'p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5',
+                exportViewMode === 'student'
+                  ? 'bg-blue-50/80 border-blue-300 ring-2 ring-blue-500/20 shadow-2xs'
+                  : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600'
+              ]"
+            >
+              <div :class="[
+                'w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5',
+                exportViewMode === 'student' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'
+              ]">
+                <span class="material-symbols-outlined text-base">group</span>
+              </div>
+              <div class="min-w-0">
+                <div :class="['text-xs font-bold', exportViewMode === 'student' ? 'text-blue-950' : 'text-slate-800']">
+                  {{ lang === 'kh' ? 'សរុបតាមបេក្ខជន (បង្ហាញគ្រប់មុខវិជ្ជា)' : 'Consolidated by Candidate' }}
+                </div>
+                <div class="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                  {{ lang === 'kh' ? 'សមស្របពេលសិស្សប្រឡង ៣មុខវិជ្ជា ដោយរាយមុខវិជ្ជា ពិន្ទុនីមួយៗ និងពិន្ទុសរុបក្នុងមួយជួរ' : 'Best for candidates taking 3 subjects. Combines tests into 1 row with all scores.' }}
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              @click="exportViewMode = 'detail'"
+              :class="[
+                'p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-2.5',
+                exportViewMode === 'detail'
+                  ? 'bg-blue-50/80 border-blue-300 ring-2 ring-blue-500/20 shadow-2xs'
+                  : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600'
+              ]"
+            >
+              <div :class="[
+                'w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5',
+                exportViewMode === 'detail' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'
+              ]">
+                <span class="material-symbols-outlined text-base">description</span>
+              </div>
+              <div class="min-w-0">
+                <div :class="['text-xs font-bold', exportViewMode === 'detail' ? 'text-blue-950' : 'text-slate-800']">
+                  {{ lang === 'kh' ? 'លម្អិតតាមវិញ្ញាសានីមួយៗ' : 'Detailed Submissions' }}
+                </div>
+                <div class="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                  {{ lang === 'kh' ? 'បង្ហាញមួយជួរសម្រាប់វិញ្ញាសានីមួយៗដែលបានប្រឡង' : 'Shows each exam submission row separately.' }}
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
         <!-- Preview Count Banner -->
         <div
           v-if="exportFilteredResults.length > 0"
@@ -416,21 +476,33 @@
         >
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-base shadow-sm shrink-0">
-              {{ exportFilteredResults.length }}
+              {{ exportViewMode === 'student' ? exportGroupedStudents.length : exportFilteredResults.length }}
             </div>
             <div>
               <div class="text-xs font-bold text-emerald-950">
-                {{ t.exportReady }}
+                {{ exportViewMode === 'student' ? (lang === 'kh' ? 'បេក្ខជនត្រៀមទាញយក' : 'Candidates Ready for Export') : t.exportReady }}
               </div>
-              <div class="text-[11px] text-emerald-700 mt-0.5">
-                {{ lang === 'kh' ? 'ឆ្នាំសិក្សា:' : 'Academic Year:' }}
-                <span class="font-bold font-mono">{{ exportYear || (lang === 'kh' ? 'គ្រប់ឆ្នាំទាំងអស់' : 'All Years') }}</span>
+              <div class="text-[11px] text-emerald-700 mt-0.5 flex flex-wrap items-center gap-x-2">
+                <span>
+                  {{ lang === 'kh' ? 'ឆ្នាំសិក្សា:' : 'Year:' }}
+                  <span class="font-bold font-mono">{{ exportYear || (lang === 'kh' ? 'គ្រប់ឆ្នាំទាំងអស់' : 'All') }}</span>
+                </span>
+                <span>•</span>
+                <span>
+                  {{ lang === 'kh' ? 'វេន:' : 'Shift:' }}
+                  <span class="font-bold">{{ exportSessionName }}</span>
+                </span>
               </div>
             </div>
           </div>
           <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white text-emerald-800 font-bold text-xs border border-emerald-200 shadow-2xs">
             <span class="material-symbols-outlined text-xs text-emerald-600">check_circle</span>
-            <span>{{ exportFilteredResults.length }} {{ lang === 'kh' ? 'នាក់' : 'records' }}</span>
+            <span v-if="exportViewMode === 'student'">
+              {{ exportGroupedStudents.length }} {{ lang === 'kh' ? 'បេក្ខជន' : 'candidates' }} ({{ exportFilteredResults.length }} {{ lang === 'kh' ? 'វិញ្ញាសា' : 'tests' }})
+            </span>
+            <span v-else>
+              {{ exportFilteredResults.length }} {{ lang === 'kh' ? 'កំណត់ត្រា' : 'records' }}
+            </span>
           </span>
         </div>
         <div
@@ -520,6 +592,7 @@ const searchQuery = ref('')
 
 const showExportModal = ref(false)
 const exportFormat = ref('excel')
+const exportViewMode = ref('student')
 const exportYear = ref('')
 const exportSession = ref('')
 const exportTest = ref('')
@@ -653,11 +726,112 @@ const filteredResults = computed(() => {
 })
 
 const exportFilteredResults = computed(() => {
+  const sessObj = sessions.value.find(s => String(s.SessionId) === String(exportSession.value))
+  const sessName = sessObj ? String(sessObj.SessionName).trim() : ''
+
   return results.value.filter(r => {
     const matchesYearFilter = matchesYear(r.academicYear || r.years, exportYear.value)
-    const matchesSession = !exportSession.value || String(r.sessionId) === String(exportSession.value)
+    const matchesSession = !exportSession.value || 
+      String(r.sessionId) === String(exportSession.value) || 
+      (sessName && String(r.sessionName).trim() === sessName)
     const matchesTest = !exportTest.value || String(r.testId) === String(exportTest.value)
     return matchesYearFilter && matchesSession && matchesTest
+  })
+})
+
+const exportSessionName = computed(() => {
+  if (!exportSession.value) return lang.value === 'kh' ? 'គ្រប់វេនទាំងអស់' : 'All Exam Shifts'
+  const s = sessions.value.find(sess => String(sess.SessionId) === String(exportSession.value))
+  return s ? s.SessionName : (lang.value === 'kh' ? 'គ្រប់វេនទាំងអស់' : 'All Exam Shifts')
+})
+
+const exportDistinctTests = computed(() => {
+  const map = new Map()
+  exportFilteredResults.value.forEach(r => {
+    const testId = r.testId ? String(r.testId) : ''
+    const testName = r.testName || (testId ? `Test ${testId}` : 'Exam')
+    const key = testId || testName
+    if (!map.has(key)) {
+      map.set(key, { id: testId, name: testName })
+    }
+  })
+  return Array.from(map.values())
+})
+
+const exportGroupedStudents = computed(() => {
+  const map = new Map()
+
+  exportFilteredResults.value.forEach(r => {
+    const key = r.studentId ? `id_${r.studentId}` : (r.studentCode ? `code_${r.studentCode}` : `name_${r.studentName}`)
+
+    if (!map.has(key)) {
+      map.set(key, {
+        studentId: r.studentId,
+        studentCode: r.studentCode || '-',
+        studentName: r.studentName || '-',
+        academicYear: r.academicYear || r.years || '-',
+        sessionName: r.sessionName || '-',
+        sessionId: r.sessionId,
+        examDay: (!isEnglishDay(r.examDay || r.days) ? (r.examDay || r.days) : '') || '-',
+        examDate: r.completedAt || r.examDate || r.startedAt,
+        submissions: []
+      })
+    }
+
+    const student = map.get(key)
+    const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
+
+    const subData = {
+      testId: r.testId,
+      testName: r.testName || 'វិញ្ញាសា',
+      score: Number(r.score) || 0,
+      totalMarks: Number(r.totalMarks) || 0,
+      totalCorrect: Number(r.totalCorrect) || 0,
+      accuracy: Number(r.accuracy) || 0,
+      passScore: r.passScore,
+      isPassed,
+      completedAt: r.completedAt
+    }
+
+    const existingIdx = student.submissions.findIndex(s =>
+      (r.testId && String(s.testId) === String(r.testId)) ||
+      (r.testName && s.testName === r.testName)
+    )
+
+    if (existingIdx >= 0) {
+      if ((Number(r.score) || 0) >= student.submissions[existingIdx].score) {
+        student.submissions[existingIdx] = subData
+      }
+    } else {
+      student.submissions.push(subData)
+    }
+
+    if (r.completedAt && (!student.examDate || new Date(r.completedAt) > new Date(student.examDate))) {
+      student.examDate = r.completedAt
+    }
+  })
+
+  return Array.from(map.values()).map(s => {
+    const totalScore = s.submissions.reduce((acc, sub) => acc + sub.score, 0)
+    const totalMaxMarks = s.submissions.reduce((acc, sub) => acc + sub.totalMarks, 0)
+    const totalCorrect = s.submissions.reduce((acc, sub) => acc + sub.totalCorrect, 0)
+    const allPassed = s.submissions.length > 0 && s.submissions.every(sub => sub.isPassed)
+    const avgAccuracy = totalMaxMarks > 0
+      ? Math.round((totalScore / totalMaxMarks) * 100)
+      : (s.submissions.length ? Math.round(s.submissions.reduce((acc, sub) => acc + sub.accuracy, 0) / s.submissions.length) : 0)
+
+    const examsSummary = s.submissions.map(sub => `${sub.testName}: ${sub.score}/${sub.totalMarks}`).join(' | ')
+
+    return {
+      ...s,
+      totalScore,
+      totalMaxMarks,
+      totalCorrect,
+      allPassed,
+      avgAccuracy,
+      examsSummary,
+      examCount: s.submissions.length
+    }
   })
 })
 
@@ -703,9 +877,22 @@ const formatDate = (iso) => {
 
 const openExportModal = (format = 'excel') => {
   exportFormat.value = format
-  exportYear.value = selectedYear.value
-  exportSession.value = selectedSession.value
-  exportTest.value = selectedTest.value
+  exportViewMode.value = 'student' // Default to consolidated candidate layout
+
+  if (selectedYear.value) {
+    exportYear.value = selectedYear.value
+  } else if (academicYears.value && academicYears.value.length) {
+    const firstY = academicYears.value[0]
+    exportYear.value = typeof firstY === 'string' ? firstY : (firstY.year || firstY.name || '')
+  } else if (results.value.length) {
+    const foundY = results.value.find(r => r.academicYear || r.years)
+    exportYear.value = foundY ? (foundY.academicYear || foundY.years) : ''
+  } else {
+    exportYear.value = ''
+  }
+
+  exportSession.value = selectedSession.value || ''
+  exportTest.value = selectedTest.value || ''
   showExportModal.value = true
 }
 
@@ -723,41 +910,102 @@ const executeExportExcel = () => {
     return
   }
 
-  const exportData = exportFilteredResults.value.map((r, index) => {
-    const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
-    const cleanDay = (!isEnglishDay(r.examDay || r.days) ? (r.examDay || r.days) : '') || '-'
-    return {
-      'ល.រ (No.)': index + 1,
-      'ឈ្មោះសិស្ស (Student Name)': r.studentName || '-',
-      'អត្តលេខ (Student ID)': r.studentCode || '-',
-      'ឆ្នាំសិក្សា (Academic Year)': r.academicYear || r.years || '-',
-      'កាលវិភាគថ្ងៃ (Exam Day)': cleanDay,
-      'ការប្រឡង (Exam)': r.testName || '-',
-      'ពិន្ទុ (Score)': `${r.score} / ${r.totalMarks}`,
-      'លទ្ធផល (Result)': isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
-      'កាលបរិច្ឆេទ (Date)': formatDate(r.completedAt || r.examDate),
-      'ឈ្មោះវេនប្រឡង (Shift Name)': r.sessionName || '-'
-    }
-  })
+  const distinctTests = exportDistinctTests.value
+  let exportData = []
+  let colWidths = []
+
+  if (exportViewMode.value === 'student') {
+    const grouped = exportGroupedStudents.value
+    exportData = grouped.map((s, index) => {
+      const row = {
+        'ល.រ (No.)': index + 1,
+        'ឈ្មោះសិស្ស (Student Name)': s.studentName,
+        'អត្តលេខ (Student ID)': s.studentCode,
+        'ឆ្នាំសិក្សា (Academic Year)': s.academicYear,
+        'វេនប្រឡង (Exam Shift)': s.sessionName,
+        'កាលវិភាគថ្ងៃ (Exam Day)': s.examDay,
+        'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង (Exams Taken & Scores)': s.examsSummary,
+      }
+
+      // Add individual score columns for each distinct exam
+      distinctTests.forEach(t => {
+        const sub = s.submissions.find(item => String(item.testId) === String(t.id) || item.testName === t.name)
+        const colKey = `[ពិន្ទុ] ${t.name}`
+        row[colKey] = sub ? `${sub.score} / ${sub.totalMarks}` : '-'
+      })
+
+      row['ពិន្ទុសរុប (Total Score)'] = `${s.totalScore} / ${s.totalMaxMarks}`
+      row['អត្រាត្រឹមត្រូវ (Avg %)'] = `${s.avgAccuracy}%`
+      row['ចំនួនវិញ្ញាសា (Subjects)'] = s.examCount
+      row['លទ្ធផលរួម (Overall Result)'] = s.allPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)'
+      row['កាលបរិច្ឆេទប្រឡង (Date)'] = formatDate(s.examDate)
+
+      return row
+    })
+
+    colWidths = [
+      { wch: 8 },  // No.
+      { wch: 24 }, // Name
+      { wch: 16 }, // ID
+      { wch: 16 }, // Academic Year
+      { wch: 24 }, // Shift
+      { wch: 16 }, // Day
+      { wch: 45 }, // Exams summary
+      ...distinctTests.map(() => ({ wch: 20 })), // Individual test columns
+      { wch: 18 }, // Total Score
+      { wch: 16 }, // Accuracy
+      { wch: 12 }, // Subjects count
+      { wch: 16 }, // Result
+      { wch: 22 }  // Date
+    ]
+  } else {
+    // Detail by submission mode
+    exportData = exportFilteredResults.value.map((r, index) => {
+      const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
+      const cleanDay = (!isEnglishDay(r.examDay || r.days) ? (r.examDay || r.days) : '') || '-'
+      return {
+        'ល.រ (No.)': index + 1,
+        'ឈ្មោះសិស្ស (Student Name)': r.studentName || '-',
+        'អត្តលេខ (Student ID)': r.studentCode || '-',
+        'ឆ្នាំសិក្សា (Academic Year)': r.academicYear || r.years || '-',
+        'វេនប្រឡង (Exam Shift)': r.sessionName || '-',
+        'កាលវិភាគថ្ងៃ (Exam Day)': cleanDay,
+        'ការប្រឡង (Exam)': r.testName || '-',
+        'ពិន្ទុ (Score)': `${r.score} / ${r.totalMarks}`,
+        'អត្រាត្រឹមត្រូវ (Accuracy)': `${r.accuracy || 0}%`,
+        'លទ្ធផល (Result)': isPassed ? 'ជាប់ (Pass)' : 'ធ្លាក់ (Fail)',
+        'កាលបរិច្ឆេទ (Date)': formatDate(r.completedAt || r.examDate)
+      }
+    })
+
+    colWidths = [
+      { wch: 8 },
+      { wch: 24 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 24 },
+      { wch: 16 },
+      { wch: 32 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 22 }
+    ]
+  }
 
   const ws = XLSX.utils.json_to_sheet(exportData)
-  ws['!cols'] = [
-    { wch: 8 },
-    { wch: 26 },
-    { wch: 16 },
-    { wch: 16 },
-    { wch: 18 },
-    { wch: 32 },
-    { wch: 16 },
-    { wch: 16 },
-    { wch: 22 },
-    { wch: 26 }
-  ]
+  ws['!cols'] = colWidths
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Exam Results')
+  const sheetTitle = exportViewMode.value === 'student' ? 'Student Exam Summary' : 'Exam Submissions'
+  XLSX.utils.book_append_sheet(wb, ws, sheetTitle)
+
   const dateStr = new Date().toISOString().split('T')[0]
   const yearTag = exportYear.value ? `${exportYear.value.replace(/[^a-zA-Z0-9_-]/g, '_')}_` : ''
-  XLSX.writeFile(wb, `Exam_Results_${yearTag}${dateStr}.xlsx`)
+  const shiftObj = sessions.value.find(s => String(s.SessionId) === String(exportSession.value))
+  const shiftTag = shiftObj ? `${(shiftObj.SessionName || 'Shift').replace(/[^a-zA-Z0-9\u1780-\u17FF_-]/g, '_')}_` : ''
+  const modeTag = exportViewMode.value === 'student' ? 'Summary_' : 'Detail_'
+
+  XLSX.writeFile(wb, `Exam_Results_${modeTag}${yearTag}${shiftTag}${dateStr}.xlsx`)
   showExportModal.value = false
   toastSuccess(lang.value === 'kh' ? 'បាននាំចេញទិន្នន័យជា Excel ដោយជោគជ័យ' : 'Results exported to Excel successfully')
 }
@@ -768,48 +1016,126 @@ const executeExportPDF = () => {
     return
   }
 
-  const rows = exportFilteredResults.value.map((r, idx) => {
-    const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
-    const cleanDay = (!isEnglishDay(r.examDay || r.days) ? (r.examDay || r.days) : '') || '-'
-    return `
-      <tr>
-        <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">${idx + 1}</td>
-        <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold;">
-          ${r.studentName || '-'}
-          <div style="font-size: 11px; font-family: monospace; color: #2563eb;">${r.studentCode || ''}</div>
-        </td>
-        <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-family: monospace; font-weight: bold; color: #1e3a8a;">
-          ${r.academicYear || r.years || '-'}
-        </td>
-        <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px; color: #0369a1;">
-          ${cleanDay}
-        </td>
-        <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.testName || '-'}</td>
-        <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold;">
-          ${r.score} / ${r.totalMarks}
-        </td>
-        <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">
-          <span style="display: inline-block; padding: 2px 6px; border-radius: 9999px; font-size: 10px; font-weight: bold; background-color: ${isPassed ? '#dcfce7' : '#fee2e2'}; color: ${isPassed ? '#166534' : '#991b1b'};">
-            ${isPassed ? 'ជាប់' : 'ធ្លាក់'}
-          </span>
-        </td>
-        <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDate(r.completedAt || r.examDate)}</td>
-        <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.sessionName || '-'}</td>
-      </tr>
-    `
-  }).join('')
-
   const printWindow = window.open('', '_blank')
   if (!printWindow) {
     toastError(lang.value === 'kh' ? 'សូមអនុញ្ញាតបើក Pop-up ដើម្បីបោះពុម្ព PDF' : 'Please allow popups to export PDF')
     return
   }
 
+  const isStudentMode = exportViewMode.value === 'student'
   const title = lang.value === 'kh' ? 'របាយការណ៍លទ្ធផលប្រឡង' : 'Examination Results Report'
   const dateStr = new Date().toLocaleDateString(lang.value === 'kh' ? 'km-KH' : 'en-US', {
     year: 'numeric', month: 'long', day: 'numeric'
   })
   const yearDisplay = exportYear.value || (lang.value === 'kh' ? 'គ្រប់ឆ្នាំទាំងអស់ (All Academic Years)' : 'All Academic Years')
+  const shiftDisplay = exportSessionName.value
+
+  let tableHeaderHtml = ''
+  let tableRowsHtml = ''
+
+  if (isStudentMode) {
+    tableHeaderHtml = `
+      <tr>
+        <th style="text-align: center; width: 35px;">#</th>
+        <th>${lang.value === 'kh' ? 'ឈ្មោះសិស្ស (Student Name)' : 'Student Name'}</th>
+        <th style="text-align: center;">${lang.value === 'kh' ? 'ឆ្នាំសិក្សា (Year)' : 'Academic Year'}</th>
+        <th>${lang.value === 'kh' ? 'វេនប្រឡង (Exam Shift)' : 'Exam Shift'}</th>
+        <th>${lang.value === 'kh' ? 'មុខវិជ្ជា/វិញ្ញាសាដែលបានប្រឡង និងពិន្ទុ (Exams Taken & Scores)' : 'Exams Taken & Scores'}</th>
+        <th style="text-align: center;">${lang.value === 'kh' ? 'ពិន្ទុសរុប (Total Score)' : 'Total Score'}</th>
+        <th style="text-align: center;">${lang.value === 'kh' ? 'លទ្ធផលរួម (Result)' : 'Overall Result'}</th>
+        <th>${lang.value === 'kh' ? 'កាលបរិច្ឆេទ (Date)' : 'Date'}</th>
+      </tr>
+    `
+
+    tableRowsHtml = exportGroupedStudents.value.map((s, idx) => {
+      const examsHtml = s.submissions.map(sub => `
+        <div style="margin-bottom: 3px; line-height: 1.3;">
+          <span style="font-weight: 600; color: #1e293b;">${sub.testName}:</span>
+          <span style="font-weight: bold; color: ${sub.isPassed ? '#166534' : '#991b1b'};">${sub.score} / ${sub.totalMarks}</span>
+          <span style="font-size: 10px; color: #64748b;">(${sub.accuracy}%)</span>
+        </div>
+      `).join('')
+
+      return `
+        <tr>
+          <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">${idx + 1}</td>
+          <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">
+            <div style="font-weight: bold; color: #0f172a; font-size: 12px;">${s.studentName}</div>
+            <div style="font-size: 11px; font-family: monospace; color: #2563eb;">${s.studentCode}</div>
+          </td>
+          <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-family: monospace; font-weight: bold; color: #1e3a8a;">
+            ${s.academicYear}
+          </td>
+          <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">
+            <div style="font-weight: 600;">${s.sessionName}</div>
+            ${s.examDay && s.examDay !== '-' ? `<div style="font-size: 10px; color: #0369a1;">${s.examDay}</div>` : ''}
+          </td>
+          <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">
+            ${examsHtml}
+          </td>
+          <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">
+            <div style="font-weight: bold; font-size: 12px; color: #0f172a;">${s.totalScore} / ${s.totalMaxMarks}</div>
+            <div style="font-size: 10px; color: #64748b;">${s.avgAccuracy}% (${s.examCount} ${lang.value === 'kh' ? 'វិញ្ញាសា' : 'tests'})</div>
+          </td>
+          <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">
+            <span style="display: inline-block; padding: 3px 8px; border-radius: 9999px; font-size: 10px; font-weight: bold; background-color: ${s.allPassed ? '#dcfce7' : '#fee2e2'}; color: ${s.allPassed ? '#166534' : '#991b1b'};">
+              ${s.allPassed ? (lang.value === 'kh' ? 'ជាប់' : 'Pass') : (lang.value === 'kh' ? 'ធ្លាក់' : 'Fail')}
+            </span>
+          </td>
+          <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDate(s.examDate)}</td>
+        </tr>
+      `
+    }).join('')
+  } else {
+    tableHeaderHtml = `
+      <tr>
+        <th style="text-align: center; width: 35px;">#</th>
+        <th>${lang.value === 'kh' ? 'ឈ្មោះសិស្ស (Student Name)' : 'Student Name'}</th>
+        <th style="text-align: center;">${lang.value === 'kh' ? 'ឆ្នាំសិក្សា (Year)' : 'Academic Year'}</th>
+        <th style="text-align: center;">${lang.value === 'kh' ? 'កាលវិភាគថ្ងៃ (Day)' : 'Exam Day'}</th>
+        <th>${lang.value === 'kh' ? 'ការប្រឡង (Exam)' : 'Exam'}</th>
+        <th style="text-align: center;">${lang.value === 'kh' ? 'ពិន្ទុ (Score)' : 'Score'}</th>
+        <th style="text-align: center;">${lang.value === 'kh' ? 'លទ្ធផល' : 'Result'}</th>
+        <th>${lang.value === 'kh' ? 'កាលបរិច្ឆេទ (Date)' : 'Date'}</th>
+        <th>${lang.value === 'kh' ? 'ឈ្មោះវេនប្រឡង (Shift)' : 'Shift'}</th>
+      </tr>
+    `
+
+    tableRowsHtml = exportFilteredResults.value.map((r, idx) => {
+      const isPassed = (r.passScore != null && r.passScore > 0) ? (r.score >= r.passScore) : (r.accuracy >= 50)
+      const cleanDay = (!isEnglishDay(r.examDay || r.days) ? (r.examDay || r.days) : '') || '-'
+      return `
+        <tr>
+          <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">${idx + 1}</td>
+          <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold;">
+            ${r.studentName || '-'}
+            <div style="font-size: 11px; font-family: monospace; color: #2563eb;">${r.studentCode || ''}</div>
+          </td>
+          <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-family: monospace; font-weight: bold; color: #1e3a8a;">
+            ${r.academicYear || r.years || '-'}
+          </td>
+          <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px; color: #0369a1;">
+            ${cleanDay}
+          </td>
+          <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.testName || '-'}</td>
+          <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: bold;">
+            ${r.score} / ${r.totalMarks}
+          </td>
+          <td style="text-align: center; padding: 6px 8px; border: 1px solid #cbd5e1;">
+            <span style="display: inline-block; padding: 2px 6px; border-radius: 9999px; font-size: 10px; font-weight: bold; background-color: ${isPassed ? '#dcfce7' : '#fee2e2'}; color: ${isPassed ? '#166534' : '#991b1b'};">
+              ${isPassed ? 'ជាប់' : 'ធ្លាក់'}
+            </span>
+          </td>
+          <td style="padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDate(r.completedAt || r.examDate)}</td>
+          <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${r.sessionName || '-'}</td>
+        </tr>
+      `
+    }).join('')
+  }
+
+  const candidateSummaryText = isStudentMode
+    ? `${lang.value === 'kh' ? 'ចំនួនបេក្ខជនសរុប' : 'Total Candidates'}: ${exportGroupedStudents.value.length} ${lang.value === 'kh' ? 'នាក់' : 'candidates'} (${exportFilteredResults.value.length} ${lang.value === 'kh' ? 'វិញ្ញាសា' : 'test submissions'})`
+    : `${lang.value === 'kh' ? 'ចំនួនសិស្សប្រឡង' : 'Total Submissions'}: ${exportFilteredResults.value.length} ${lang.value === 'kh' ? 'នាក់' : 'records'}`
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -821,7 +1147,9 @@ const executeExportPDF = () => {
           body { font-family: 'Kantumruy Pro', 'Inter', system-ui, sans-serif; margin: 0; color: #0f172a; font-size: 11px; }
           .header { text-align: center; margin-bottom: 16px; border-bottom: 2px solid #0284c7; padding-bottom: 8px; }
           .header h1 { margin: 0 0 4px; font-size: 18px; color: #0f172a; }
-          .header .year-badge { display: inline-block; font-size: 12px; font-weight: bold; color: #1e40af; background: #eff6ff; padding: 2px 10px; border-radius: 9999px; margin-top: 4px; border: 1px solid #bfdbfe; }
+          .header .badges { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; }
+          .header .badge { display: inline-block; font-size: 11px; font-weight: bold; color: #1e40af; background: #eff6ff; padding: 2px 10px; border-radius: 9999px; border: 1px solid #bfdbfe; }
+          .header .badge-shift { color: #065f46; background: #ecfdf5; border-color: #a7f3d0; }
           .header p { margin: 6px 0 0; font-size: 11px; color: #64748b; }
           table { width: 100%; border-collapse: collapse; margin-top: 8px; }
           th { background-color: #f8fafc; padding: 8px; border: 1px solid #94a3b8; font-weight: bold; text-align: left; font-size: 10px; text-transform: uppercase; color: #475569; }
@@ -833,25 +1161,18 @@ const executeExportPDF = () => {
       <body>
         <div class="header">
           <h1>${title}</h1>
-          <div class="year-badge">${lang.value === 'kh' ? 'ឆ្នាំសិក្សា' : 'Academic Year'}: ${yearDisplay}</div>
-          <p>${lang.value === 'kh' ? 'កាលបរិច្ឆេទបង្កើត' : 'Generated on'}: ${dateStr} | ${lang.value === 'kh' ? 'ចំនួនសិស្សប្រឡង' : 'Total Submissions'}: ${exportFilteredResults.value.length} ${lang.value === 'kh' ? 'នាក់' : 'candidates'}</p>
+          <div class="badges">
+            <span class="badge">${lang.value === 'kh' ? 'ឆ្នាំសិក្សា' : 'Academic Year'}: ${yearDisplay}</span>
+            <span class="badge badge-shift">${lang.value === 'kh' ? 'វេនប្រឡង' : 'Exam Shift'}: ${shiftDisplay}</span>
+          </div>
+          <p>${lang.value === 'kh' ? 'កាលបរិច្ឆេទបង្កើត' : 'Generated on'}: ${dateStr} | ${candidateSummaryText}</p>
         </div>
         <table>
           <thead>
-            <tr>
-              <th style="text-align: center; width: 35px;">#</th>
-              <th>${lang.value === 'kh' ? 'ឈ្មោះសិស្ស (Student Name)' : 'Student Name'}</th>
-              <th style="text-align: center;">${lang.value === 'kh' ? 'ឆ្នាំសិក្សា (Year)' : 'Academic Year'}</th>
-              <th style="text-align: center;">${lang.value === 'kh' ? 'កាលវិភាគថ្ងៃ (Day)' : 'Exam Day'}</th>
-              <th>${lang.value === 'kh' ? 'ការប្រឡង (Exam)' : 'Exam'}</th>
-              <th style="text-align: center;">${lang.value === 'kh' ? 'ពិន្ទុ (Score)' : 'Score'}</th>
-              <th style="text-align: center;">${lang.value === 'kh' ? 'លទ្ធផល' : 'Result'}</th>
-              <th>${lang.value === 'kh' ? 'កាលបរិច្ឆេទ (Date)' : 'Date'}</th>
-              <th>${lang.value === 'kh' ? 'ឈ្មោះវេនប្រឡង (Shift)' : 'Shift'}</th>
-            </tr>
+            ${tableHeaderHtml}
           </thead>
           <tbody>
-            ${rows}
+            ${tableRowsHtml}
           </tbody>
         </table>
         <script>
