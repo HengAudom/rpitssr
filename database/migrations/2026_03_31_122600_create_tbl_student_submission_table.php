@@ -21,6 +21,10 @@ return new class extends Migration
                 $table->timestamp('CompletedAt')->nullable();
                 $table->integer('TotalCorrect')->default(0);
                 $table->decimal('Score', 8, 2)->default(0.00);
+                $table->decimal('TotalMarks', 8, 2)->nullable();
+                $table->integer('TotalQuestions')->nullable();
+                $table->integer('QuestionLimit')->nullable();
+                $table->integer('PassScore')->nullable();
                 $table->integer('Interruptions')->default(0)->nullable();
                 $table->timestamps();
 
@@ -32,6 +36,18 @@ return new class extends Migration
             Schema::table($tableName, function (Blueprint $table) use ($tableName) {
                 if (!Schema::hasColumn($tableName, 'AssignedQuestionIds')) {
                     $table->json('AssignedQuestionIds')->nullable()->after('TestId');
+                }
+                if (!Schema::hasColumn($tableName, 'TotalMarks')) {
+                    $table->decimal('TotalMarks', 8, 2)->nullable()->after('Score');
+                }
+                if (!Schema::hasColumn($tableName, 'TotalQuestions')) {
+                    $table->integer('TotalQuestions')->nullable()->after('TotalMarks');
+                }
+                if (!Schema::hasColumn($tableName, 'QuestionLimit')) {
+                    $table->integer('QuestionLimit')->nullable()->after('TotalQuestions');
+                }
+                if (!Schema::hasColumn($tableName, 'PassScore')) {
+                    $table->integer('PassScore')->nullable()->after('QuestionLimit');
                 }
             });
         }
