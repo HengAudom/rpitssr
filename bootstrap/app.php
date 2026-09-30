@@ -79,7 +79,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
                         : 'មិនអាចភ្ជាប់ទៅកាន់ Database បានទេ (សូមពិនិត្យមើល MySQL Server)។';
                     return response()->json([
                         'message' => $message,
-                        'error' => 'Database connection error'
+                        'error' => 'Database connection error',
+                        'detail' => $msg,
                     ], 503);
                 }
             } else {
