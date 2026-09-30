@@ -1978,7 +1978,14 @@ const handleSaveTest = async (status = 'Published') => {
     notifyRealtimeChange('tests_updated')
     await loadData(true)
   } catch (e) {
-    toastError(e.response?.data?.message || (lang.value === 'kh' ? 'មានបញ្ហាក្នុងការរក្សាទុក' : 'Failed to save exam'))
+    let errorMsg = e.response?.data?.message
+    if (e.response?.data?.errors) {
+      const firstErr = Object.values(e.response.data.errors)[0]
+      if (Array.isArray(firstErr) && firstErr.length) {
+        errorMsg = firstErr[0]
+      }
+    }
+    toastError(errorMsg || (lang.value === 'kh' ? 'មានបញ្ហាក្នុងការរក្សាទុក' : 'Failed to save exam'))
   } finally {
     saving.value = false
   }

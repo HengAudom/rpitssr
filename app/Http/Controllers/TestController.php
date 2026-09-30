@@ -91,7 +91,7 @@ class TestController extends Controller
                 'SessionId' => $data['sessionId'] ?? null,
                 'ExamDay' => $data['examDay'] ?? null,
                 'AcademicYear' => $data['academicYear'] ?? null,
-                'CreatedByUserId' => $user->id,
+                'CreatedByUserId' => $user->AdminId ?? $user->id,
                 'TestName' => $data['name'],
                 'DurationMinutes' => $data['durationMinutes'],
                 'TotalMarks' => $data['totalMarks'],
@@ -102,22 +102,45 @@ class TestController extends Controller
                 'Status' => $data['status'] ?? 'Draft',
             ]);
 
+            $now = now();
+            $questionsToInsert = [];
             foreach ($data['questions'] as $qData) {
                 $isExample = (bool)($qData['isExample'] ?? $qData['is_example'] ?? (preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($qData['text'] ?? ''))));
-                $question = Question::create([
+                $questionsToInsert[] = [
                     'TestId' => $test->TestId,
                     'QuestionText' => $qData['text'],
                     'Passage' => $qData['passage'] ?? null,
                     'IsExample' => $isExample,
                     'Points' => $qData['points'] ?? 1,
-                ]);
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
 
+            foreach (array_chunk($questionsToInsert, 200) as $chunk) {
+                Question::insert($chunk);
+            }
+
+            $newQuestions = Question::where('TestId', $test->TestId)->orderBy('QuestionId', 'asc')->get();
+
+            $answersToInsert = [];
+            foreach ($newQuestions as $idx => $newQ) {
+                $qData = $data['questions'][$idx] ?? null;
+                if (!$qData || empty($qData['answers'])) continue;
                 foreach ($qData['answers'] as $aData) {
-                    Answer::create([
-                        'QuestionId' => $question->QuestionId,
+                    $answersToInsert[] = [
+                        'QuestionId' => $newQ->QuestionId,
                         'AnswerText' => $aData['text'],
-                        'IsCorrect' => $aData['correct'],
-                    ]);
+                        'IsCorrect' => (bool)$aData['correct'],
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+            }
+
+            if (!empty($answersToInsert)) {
+                foreach (array_chunk($answersToInsert, 200) as $chunk) {
+                    Answer::insert($chunk);
                 }
             }
 
@@ -236,30 +259,56 @@ class TestController extends Controller
                 'Status' => $data['status'] ?? 'Draft',
             ]);
 
-            // Delete old questions/answers and recreate
-            foreach ($test->questions as $question) {
-                Answer::where('QuestionId', $question->QuestionId)->delete();
+            // Delete old questions/answers in 2 fast bulk queries
+            $oldQIds = Question::where('TestId', $test->TestId)->pluck('QuestionId');
+            if ($oldQIds->isNotEmpty()) {
+                Answer::whereIn('QuestionId', $oldQIds)->delete();
             }
             Question::where('TestId', $test->TestId)->delete();
 
+            $now = now();
+            $questionsToInsert = [];
             foreach ($data['questions'] as $qData) {
                 $isExample = (bool)($qData['isExample'] ?? $qData['is_example'] ?? (preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($qData['text'] ?? ''))));
-                $question = Question::create([
+                $questionsToInsert[] = [
                     'TestId' => $test->TestId,
                     'QuestionText' => $qData['text'],
                     'Passage' => $qData['passage'] ?? null,
                     'IsExample' => $isExample,
                     'Points' => $qData['points'] ?? 1,
-                ]);
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
 
+            foreach (array_chunk($questionsToInsert, 200) as $chunk) {
+                Question::insert($chunk);
+            }
+
+            $newQuestions = Question::where('TestId', $test->TestId)->orderBy('QuestionId', 'asc')->get();
+
+            $answersToInsert = [];
+            foreach ($newQuestions as $idx => $newQ) {
+                $qData = $data['questions'][$idx] ?? null;
+                if (!$qData || empty($qData['answers'])) continue;
                 foreach ($qData['answers'] as $aData) {
-                    Answer::create([
-                        'QuestionId' => $question->QuestionId,
+                    $answersToInsert[] = [
+                        'QuestionId' => $newQ->QuestionId,
                         'AnswerText' => $aData['text'],
-                        'IsCorrect' => $aData['correct'],
-                    ]);
+                        'IsCorrect' => (bool)$aData['correct'],
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
                 }
             }
+
+            if (!empty($answersToInsert)) {
+                foreach (array_chunk($answersToInsert, 200) as $chunk) {
+                    Answer::insert($chunk);
+                }
+            }
+
+            return $test;
         });
 
         return response()->json(['message' => 'Test updated successfully.']);
@@ -281,8 +330,9 @@ class TestController extends Controller
         }
 
         DB::transaction(function () use ($test) {
-            foreach ($test->questions as $question) {
-                Answer::where('QuestionId', $question->QuestionId)->delete();
+            $oldQIds = Question::where('TestId', $test->TestId)->pluck('QuestionId');
+            if ($oldQIds->isNotEmpty()) {
+                Answer::whereIn('QuestionId', $oldQIds)->delete();
             }
             Question::where('TestId', $test->TestId)->delete();
             $test->delete();
