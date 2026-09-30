@@ -89,7 +89,13 @@ class ExamController extends Controller
         $rawQuestions = $test->questions;
         if ((bool)$test->RandomizeQuestions) {
             $examples = $rawQuestions->filter(fn($q) => (bool)($q->IsExample || preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($q->QuestionText))));
-            $nonExamples = $rawQuestions->reject(fn($q) => (bool)($q->IsExample || preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($q->QuestionText))))->shuffle();
+            $seed = (int)($submission?->SubmissionId ?? $student->StudentId);
+            mt_srand($seed);
+            $nonExamples = $rawQuestions->reject(fn($q) => (bool)($q->IsExample || preg_match('/^(?:0\.|០\.|Example|Ex\.|គំរូ)/iu', trim($q->QuestionText))))
+                ->values()
+                ->sortBy(function () {
+                    return mt_rand();
+                });
             $rawQuestions = $examples->concat($nonExamples);
         }
 
