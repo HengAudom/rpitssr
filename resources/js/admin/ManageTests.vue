@@ -103,26 +103,23 @@
                   <div v-if="test.randomizeQuestions || test.randomizeAnswers || test.questionLimit" class="flex items-center gap-1.5 flex-wrap mt-1">
                     <span
                       v-if="test.questionLimit"
-                      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60"
+                      class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60"
                       :title="lang === 'kh' ? `កំណត់ ${test.questionLimit} សំណួរ` : `Limit ${test.questionLimit} questions`"
                     >
-                      <span class="material-symbols-outlined text-[11px] text-amber-600">filter_list</span>
                       {{ lang === 'kh' ? `យក ${test.questionLimit} សំណួរ` : `${test.questionLimit} Qs` }}
                     </span>
                     <span
                       v-if="test.randomizeQuestions"
-                      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60"
+                      class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60"
                       :title="lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Randomize Questions'"
                     >
-                      <span class="material-symbols-outlined text-[11px] text-blue-600">shuffle</span>
                       {{ lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Shuffle Questions' }}
                     </span>
                     <span
                       v-if="test.randomizeAnswers"
-                      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60"
+                      class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60"
                       :title="lang === 'kh' ? 'ចម្លើយចៃដន្យ' : 'Randomize Answers'"
                     >
-                      <span class="material-symbols-outlined text-[11px] text-indigo-600">format_list_bulleted</span>
                       {{ lang === 'kh' ? 'ចម្លើយចៃដន្យ' : 'Shuffle Answers' }}
                     </span>
                   </div>
@@ -263,23 +260,20 @@
                 <div v-if="test.randomizeQuestions || test.randomizeAnswers || test.questionLimit" class="flex items-center gap-1.5 flex-wrap mt-1">
                   <span
                     v-if="test.questionLimit"
-                    class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60"
+                    class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60"
                   >
-                    <span class="material-symbols-outlined text-[11px] text-amber-600">filter_list</span>
                     {{ lang === 'kh' ? `យក ${test.questionLimit} សំណួរ` : `${test.questionLimit} Qs` }}
                   </span>
                   <span
                     v-if="test.randomizeQuestions"
-                    class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60"
+                    class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60"
                   >
-                    <span class="material-symbols-outlined text-[11px] text-blue-600">shuffle</span>
                     {{ lang === 'kh' ? 'សំណួរចៃដន្យ' : 'Shuffle Questions' }}
                   </span>
                   <span
                     v-if="test.randomizeAnswers"
-                    class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60"
+                    class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60"
                   >
-                    <span class="material-symbols-outlined text-[11px] text-indigo-600">format_list_bulleted</span>
                     {{ lang === 'kh' ? 'ចម្លើយចៃដន្យ' : 'Shuffle Answers' }}
                   </span>
                 </div>
