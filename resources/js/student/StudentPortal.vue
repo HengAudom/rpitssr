@@ -33,10 +33,6 @@
                   <span v-if="student.studentCode || student.studentId" class="px-2.5 py-0.5 rounded-lg bg-blue-500/25 text-blue-200 text-xs font-mono font-bold border border-blue-400/30 whitespace-nowrap inline-flex items-center shrink-0">
                     ID: {{ student.studentCode || student.studentId }}
                   </span>
-                  <span v-if="student.academicYear" class="px-2.5 py-0.5 rounded-lg bg-emerald-500/25 text-emerald-200 text-xs font-bold border border-emerald-400/30 whitespace-nowrap inline-flex items-center gap-1 shrink-0">
-                    <span class="material-symbols-outlined text-xs">school</span>
-                    <span>{{ student.academicYear }}</span>
-                  </span>
                 </div>
                 <h1 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight mt-0.5 truncate capitalize">
                   {{ studentDisplayName }}
