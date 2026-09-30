@@ -36,6 +36,8 @@ class ResultController extends Controller
                 'ss.SubmissionId as id',
                 't.TestId as testId',
                 't.TestName as testName',
+                't.AcademicYear as academicYear',
+                't.ExamDay as examDay',
                 't.TotalMarks as totalMarks',
                 't.DurationMinutes as durationMinutes',
                 'ss.StartedAt as startedAt',

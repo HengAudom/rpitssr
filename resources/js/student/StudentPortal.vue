@@ -25,33 +25,47 @@
               <span v-else class="material-symbols-outlined text-white/60 text-3xl">person</span>
             </div>
 
-            <div class="min-w-0 flex-1 space-y-1">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-blue-300 whitespace-nowrap">
-                  {{ t.candidateBadge }}
-                </span>
-                <span v-if="student.studentCode || student.studentId" class="px-2.5 py-0.5 rounded-lg bg-blue-500/25 text-blue-200 text-xs font-mono font-bold border border-blue-400/30 whitespace-nowrap inline-flex items-center shrink-0">
-                  ID: {{ student.studentCode || student.studentId }}
-                </span>
-              </div>
-              <h1 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight mt-0.5 truncate capitalize">
-                {{ studentDisplayName }}
-              </h1>
-
-              <!-- Exam Session & Shift Details -->
-              <div class="flex items-center gap-2 pt-0.5 flex-wrap">
-                <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-blue-500/20 text-blue-200 border border-blue-400/30 whitespace-nowrap">
-                  <span class="material-symbols-outlined text-xs">calendar_clock</span>
-                  <span>{{ student.sessionName || t.generalSession }}</span>
+              <div class="min-w-0 flex-1 space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-blue-300 whitespace-nowrap">
+                    {{ t.candidateBadge }}
+                  </span>
+                  <span v-if="student.studentCode || student.studentId" class="px-2.5 py-0.5 rounded-lg bg-blue-500/25 text-blue-200 text-xs font-mono font-bold border border-blue-400/30 whitespace-nowrap inline-flex items-center shrink-0">
+                    ID: {{ student.studentCode || student.studentId }}
+                  </span>
+                  <span v-if="student.academicYear" class="px-2.5 py-0.5 rounded-lg bg-emerald-500/25 text-emerald-200 text-xs font-bold border border-emerald-400/30 whitespace-nowrap inline-flex items-center gap-1 shrink-0">
+                    <span class="material-symbols-outlined text-xs">school</span>
+                    <span>{{ student.academicYear }}</span>
+                  </span>
                 </div>
+                <h1 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight mt-0.5 truncate capitalize">
+                  {{ studentDisplayName }}
+                </h1>
 
-                <div v-if="student.examDate" class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-white/10 text-slate-200 border border-white/10 font-mono whitespace-nowrap">
-                  <span class="material-symbols-outlined text-xs">event</span>
-                  <span>{{ student.examDate }}</span>
-                  <span v-if="student.startTime">({{ formatTime(student.startTime) }} - {{ formatTime(student.endTime) }})</span>
+                <!-- Exam Session, Academic Year & Shift Details -->
+                <div class="flex items-center gap-2 pt-0.5 flex-wrap">
+                  <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-blue-500/20 text-blue-200 border border-blue-400/30 whitespace-nowrap">
+                    <span class="material-symbols-outlined text-xs">calendar_clock</span>
+                    <span>{{ student.sessionName || t.generalSession }}</span>
+                  </div>
+
+                  <div v-if="student.academicYear" class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-200 border border-amber-400/30 whitespace-nowrap">
+                    <span class="material-symbols-outlined text-xs">school</span>
+                    <span>{{ lang === 'kh' ? 'ឆ្នាំសិក្សា ' : 'Academic Year: ' }}{{ student.academicYear }}</span>
+                  </div>
+
+                  <div v-if="student.examDay" class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-white/10 text-slate-200 border border-white/10 whitespace-nowrap">
+                    <span class="material-symbols-outlined text-xs">event</span>
+                    <span>{{ student.examDay }}</span>
+                  </div>
+
+                  <div v-if="student.examDate" class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-white/10 text-slate-200 border border-white/10 font-mono whitespace-nowrap">
+                    <span class="material-symbols-outlined text-xs">event</span>
+                    <span>{{ student.examDate }}</span>
+                    <span v-if="student.startTime">({{ formatTime(student.startTime) }} - {{ formatTime(student.endTime) }})</span>
+                  </div>
                 </div>
               </div>
-            </div>
           </div>
         </div>
       </div>
@@ -70,6 +84,14 @@
             <span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">schedule</span>{{ nextUrgentExam.durationMinutes }} {{ t.minutes }}</span>
             <span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">star</span>{{ nextUrgentExam.totalMarks }} {{ t.marks }}</span>
             <span v-if="nextUrgentExam.sessionName" class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">calendar_clock</span>{{ nextUrgentExam.sessionName }}</span>
+            <span v-if="nextUrgentExam.academicYear || nextUrgentExam.years" class="flex items-center gap-1 text-amber-200 font-bold bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-300/30">
+              <span class="material-symbols-outlined text-sm">school</span>
+              {{ nextUrgentExam.academicYear || nextUrgentExam.years }}
+            </span>
+            <span v-if="nextUrgentExam.examDay || nextUrgentExam.days" class="flex items-center gap-1 text-slate-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10">
+              <span class="material-symbols-outlined text-sm">event</span>
+              {{ nextUrgentExam.examDay || nextUrgentExam.days }}
+            </span>
             <span v-if="getExamTimingStatus(nextUrgentExam).isUpcoming" class="flex items-center gap-1 text-amber-200 font-bold bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-300/30">
               <span class="material-symbols-outlined text-sm">alarm</span>
               {{ lang === 'kh' ? 'បើកនៅ៖ ' : 'Opens at: ' }}{{ getExamTimingStatus(nextUrgentExam).timeText }}
@@ -130,6 +152,14 @@
                     <span class="material-symbols-outlined text-xs">calendar_clock</span>
                     {{ exam.sessionName }}
                   </span>
+                  <span v-if="exam.academicYear || exam.years" class="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded text-xs">
+                    <span class="material-symbols-outlined text-xs">school</span>
+                    {{ exam.academicYear || exam.years }}
+                  </span>
+                  <span v-if="exam.examDay || exam.days" class="inline-flex items-center gap-1 font-medium text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded text-xs">
+                    <span class="material-symbols-outlined text-xs">event</span>
+                    {{ exam.examDay || exam.days }}
+                  </span>
                   <span
                     v-if="getExamTimingStatus(exam).isUpcoming"
                     class="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded-md"
@@ -178,9 +208,10 @@
                 <h4 class="font-bold text-slate-900 text-xs sm:text-sm truncate">
                   {{ res.testName }}
                 </h4>
-                <p class="text-[11px] text-slate-400 mt-0.5 font-mono">
-                  {{ formatDate(res.completedAt) }}
-                </p>
+                <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 font-mono flex-wrap">
+                  <span>{{ formatDate(res.completedAt) }}</span>
+                  <span v-if="res.academicYear" class="text-amber-700 font-bold font-sans">• {{ res.academicYear }}</span>
+                </div>
               </div>
 
               <div class="flex items-center gap-2 shrink-0">
@@ -240,6 +271,8 @@ const student = reactive({
   examDate: null,
   startTime: null,
   endTime: null,
+  examDay: null,
+  academicYear: '',
   profileImage: ''
 })
 
@@ -416,6 +449,8 @@ const loadStudentData = async () => {
     student.examDate = s.examDate || null
     student.startTime = s.startTime || null
     student.endTime = s.endTime || null
+    student.examDay = s.examDay || null
+    student.academicYear = s.academicYear || ''
     student.profileImage = profileRes.data.user?.profileImage || ''
 
     if (!student.firstName && !student.lastName && student.name) {

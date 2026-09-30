@@ -40,7 +40,20 @@
           </div>
           <span class="text-xs font-bold uppercase tracking-wider text-blue-600">{{ t.preExamCheck }}</span>
           <h1 class="text-2xl font-extrabold text-slate-900 mt-1 tracking-tight">{{ examData?.testName }}</h1>
-          <p class="text-xs text-slate-500 mt-1">{{ examData?.skill }} · {{ examData?.group || 'All Groups' }}</p>
+          <p class="text-xs text-slate-500 mt-1.5 flex items-center justify-center gap-2 flex-wrap">
+            <span v-if="examData?.academicYear" class="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+              <span class="material-symbols-outlined text-xs">school</span>
+              {{ examData.academicYear }}
+            </span>
+            <span v-if="examData?.sessionName" class="inline-flex items-center gap-1 font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+              <span class="material-symbols-outlined text-xs">calendar_clock</span>
+              {{ examData.sessionName }}
+            </span>
+            <span v-if="examData?.examDay" class="inline-flex items-center gap-1 font-medium text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
+              <span class="material-symbols-outlined text-xs">event</span>
+              {{ examData.examDay }}
+            </span>
+          </p>
         </div>
 
         <!-- Instructions & Checklist -->

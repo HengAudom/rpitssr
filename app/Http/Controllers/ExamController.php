@@ -30,7 +30,7 @@ class ExamController extends Controller
             return response()->json(['message' => 'Student profile not found.'], 404);
         }
 
-        $test = Test::with(['questions.answers'])->find($testId);
+        $test = Test::with(['questions.answers', 'session'])->find($testId);
         if (!$test) {
             return response()->json(['message' => 'Test not found.'], 404);
         }
@@ -161,6 +161,9 @@ class ExamController extends Controller
             'submissionId' => $submission->SubmissionId,
             'testId' => $test->TestId,
             'testName' => $test->TestName,
+            'sessionName' => $test->session?->SessionName ?? ($student->session?->SessionName ?? null),
+            'academicYear' => $test->AcademicYear ?: ($test->session?->Years ?: ($student->AcademicYear ?: ($student->session?->Years ?: null))),
+            'examDay' => $test->ExamDay ?: ($test->session?->Days ?: ($student->ExamDay ?: null)),
             'durationMinutes' => $durationMin,
             'totalMarks' => $test->TotalMarks,
             'passScore' => $test->PassScore ?? 50,

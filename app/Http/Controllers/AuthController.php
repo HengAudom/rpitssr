@@ -357,6 +357,18 @@ class AuthController extends Controller
 
         if ($student) {
             $displayCode = $student->StudentCode ?: ('SR' . date('Y') . str_pad((string)$student->StudentId, 5, '0', STR_PAD_LEFT));
+
+            $academicYear = trim((string)($student->AcademicYear ?? ''));
+            if (!$academicYear && $student->session?->Years) {
+                $academicYear = trim((string)$student->session->Years);
+            }
+            if (!$academicYear) {
+                $settings = \App\Http\Controllers\AdminController::getSystemSettings();
+                $academicYear = $settings['academicYear'] ?? '2026-2027';
+            }
+
+            $examDay = $student->ExamDay ?: ($student->session?->Days ?: null);
+
             $payload['student'] = [
                 'id' => $student->StudentId,
                 'studentCode' => $displayCode,
@@ -368,12 +380,16 @@ class AuthController extends Controller
                 'gender' => $student->Gender,
                 'sessionId' => $student->SessionId,
                 'sessionName' => $student->session?->SessionName ?? 'Unassigned Shift',
+                'examDay' => $examDay,
+                'academicYear' => $academicYear,
                 'session' => $student->session ? [
                     'id' => $student->session->SessionId,
                     'name' => $student->session->SessionName,
                     'examDate' => $student->session->ExamDate,
                     'startTime' => $student->session->StartTime,
                     'endTime' => $student->session->EndTime,
+                    'days' => $student->session->Days,
+                    'years' => $student->session->Years,
                     'description' => $student->session->Description,
                 ] : null,
             ];
@@ -407,6 +423,8 @@ class AuthController extends Controller
                     'es.EndTime as endTime',
                     'es.Days as days',
                     'es.Years as years',
+                    't.ExamDay as examDay',
+                    't.AcademicYear as academicYear',
                     't.DurationMinutes as durationMinutes',
                     't.TotalMarks as totalMarks',
                     't.PassScore as passScore',
