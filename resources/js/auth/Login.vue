@@ -138,15 +138,36 @@ const isStudentCode = (val) => {
 const onUsernameInput = () => {
   errorMessage.value = ''
   const val = form.username.trim()
-  if (!val) {
+
+  // 1. ត្រូវវាយយ៉ាងតិច 3 អក្សរ ទើបចាប់ផ្តើមពិនិត្យ ឬបង្ហាញកន្លែង Password
+  if (val.length < 3) {
     isAdminMode.value = false
+    if (checkDebounceTimer) clearTimeout(checkDebounceTimer)
     return
   }
 
-  // Automatic format-based detection (zero account enumeration leaks)
-  const isStudent = isStudentCode(val)
-  isAdminMode.value = !isStudent
+  // 2. បើជាទម្រង់ Student ID (SR..., RTC...) មិនបង្ហាញកន្លែង Password ឡើយ
+  if (isStudentCode(val)) {
+    isAdminMode.value = false
+    if (checkDebounceTimer) clearTimeout(checkDebounceTimer)
+    return
+  }
 
+  const lowerVal = val.toLowerCase()
+
+  // 3. ពិនិត្យភ្លាមៗលើពាក្យ Admin សំខាន់ៗ (admin, admindom, domadmin, super...)
+  if (
+    lowerVal === 'admin' ||
+    lowerVal === 'admindom' ||
+    lowerVal === 'domadmin' ||
+    lowerVal.startsWith('admin') ||
+    lowerVal.startsWith('super') ||
+    lowerVal.includes('dom')
+  ) {
+    isAdminMode.value = true
+  }
+
+  // 4. ផ្ទៀងផ្ទាត់ជាមួយ Server បើពិតជាគណនី Admin ទើបបង្ហាញកន្លែង Password
   const reqId = ++currentRequestId
   if (checkDebounceTimer) clearTimeout(checkDebounceTimer)
   checkDebounceTimer = setTimeout(async () => {

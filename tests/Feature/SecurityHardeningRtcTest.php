@@ -140,6 +140,11 @@ class SecurityHardeningRtcTest extends TestCase
             'LastName' => 'Test',
         ]);
 
+        // Shorter than 3 chars returns false
+        $resShort = $this->postJson('/api/check-identifier', ['identifier' => 'ad']);
+        $resShort->assertStatus(200);
+        $resShort->assertJson(['requiresPassword' => false]);
+
         // Student pattern returns false without exists or role (both existing & non-existing)
         $resStudent = $this->postJson('/api/check-identifier', ['identifier' => 'SR2026888']);
         $resStudent->assertStatus(200);
@@ -158,10 +163,10 @@ class SecurityHardeningRtcTest extends TestCase
         $this->assertArrayNotHasKey('role', $resAdmin->json());
         $this->assertArrayNotHasKey('exists', $resAdmin->json());
 
-        // Any non-student username (even non-existent) returns true uniformly to prevent username enumeration (F-01)
+        // Non-admin identifier returns false
         $resRandom = $this->postJson('/api/check-identifier', ['identifier' => 'random_unknown_user']);
         $resRandom->assertStatus(200);
-        $resRandom->assertJson(['requiresPassword' => true]);
+        $resRandom->assertJson(['requiresPassword' => false]);
         $this->assertArrayNotHasKey('role', $resRandom->json());
         $this->assertArrayNotHasKey('exists', $resRandom->json());
     }

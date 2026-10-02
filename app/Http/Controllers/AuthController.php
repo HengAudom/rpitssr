@@ -108,15 +108,16 @@ class AuthController extends Controller
     {
         $raw = $request->input('identifier') ?? $request->input('username') ?? '';
         $identifier = trim((string)$raw);
-        if (mb_strlen($identifier) < 2) {
+
+        // Require at least 3 characters before checking
+        if (mb_strlen($identifier) < 3) {
             return response()->json([
                 'status' => 'ok',
                 'requiresPassword' => false,
             ]);
         }
 
-        // Student pattern (SR, RTC, STD prefixes or pure numeric ID) does not require password.
-        // Never query the database here to prevent account/username enumeration (F-01 / Pentest Remediation).
+        // Student pattern (SR, RTC, STD prefixes or pure numeric ID) does not require password
         $isStudentPattern = preg_match('/^(?:rtc|sr|std)[\-_]?\d+/i', $identifier)
             || preg_match('/^(?:rtc|sr)/i', $identifier)
             || ctype_digit($identifier);
@@ -128,11 +129,15 @@ class AuthController extends Controller
             ]);
         }
 
-        // All non-student identifiers (standard usernames) require password uniformly,
-        // without leaking whether the account exists in the database.
+        $clean = strtolower($identifier);
+
+        // Only exact admin username or standard alias (or existing admin account)
+        $isAdmin = in_array($clean, ['admin', 'superadmin', 'super admin', 'administrator', 'admindom', 'domadmin'])
+            || Admin::whereRaw('LOWER(Username) = ?', [$clean])->exists();
+
         return response()->json([
             'status' => 'ok',
-            'requiresPassword' => true,
+            'requiresPassword' => (bool)$isAdmin,
         ]);
     }
 
