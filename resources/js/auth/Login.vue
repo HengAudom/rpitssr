@@ -3,19 +3,9 @@
     <Card padding="none" class="p-5 sm:p-8 shadow-soft-lg border border-slate-200/80 rounded-2xl sm:rounded-3xl">
       <!-- Form Header -->
       <div class="mb-4 sm:mb-6 space-y-1 sm:space-y-1.5">
-        <div class="flex items-center justify-between gap-2">
-          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-            {{ isAdminMode ? (lang === 'kh' ? 'ចូលផ្ទាំងគ្រប់គ្រង' : 'Admin Sign In') : (lang === 'kh' ? 'ចូលប្រឡង' : 'Candidate Sign In') }}
-          </h2>
-          <button
-            type="button"
-            @click="toggleMode"
-            class="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-300 hover:bg-slate-50 transition-all flex items-center gap-1 select-none"
-          >
-            <span class="material-symbols-outlined text-xs">{{ isAdminMode ? 'school' : 'admin_panel_settings' }}</span>
-            <span>{{ isAdminMode ? (lang === 'kh' ? 'ទម្រង់សិស្ស' : 'Student Mode') : (lang === 'kh' ? 'ទម្រង់ Admin' : 'Admin Mode') }}</span>
-          </button>
-        </div>
+        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+          {{ isAdminMode ? (lang === 'kh' ? 'ចូលផ្ទាំងគ្រប់គ្រង' : 'Admin Sign In') : (lang === 'kh' ? 'ចូលប្រឡង' : 'Candidate Sign In') }}
+        </h2>
         <p class="text-xs sm:text-sm text-slate-500">
           {{ isAdminMode ? (lang === 'kh' ? 'សូមបញ្ចូលពាក្យសម្ងាត់របស់អ្នកគ្រប់គ្រងដើម្បីបន្ត' : 'Please enter admin password to continue') : (lang === 'kh' ? 'បញ្ចូលលេខសម្គាល់សិស្ស ដើម្បីចូលបន្ទប់ប្រឡង' : 'Enter your Student ID to access the examination portal') }}
         </p>
@@ -143,14 +133,6 @@ const isStudentCode = (val) => {
   if (!val) return false
   const clean = val.trim()
   return /^(?:rtc|sr|std)[\-_]?\d+/i.test(clean) || /^(?:rtc|sr)/i.test(clean) || /^\d{4,}$/.test(clean)
-}
-
-const toggleMode = () => {
-  isAdminMode.value = !isAdminMode.value
-  errorMessage.value = ''
-  if (isAdminMode.value) {
-    nextTick(() => passwordInputRef.value?.focus?.())
-  }
 }
 
 const onUsernameInput = () => {
