@@ -124,21 +124,25 @@ router.beforeEach(async (to, _from, next) => {
     return next({ name: 'Login', replace: true })
   }
 
-  let role = cachedUser?.role || localStorage.getItem('userRole') || ''
-
-  // Only perform network request if role is completely unknown
-  if (!role && !cachedUser) {
+  // Always verify user and role from server-authenticated session (F-03 Remediation).
+  // Never trust unverified client-controlled localStorage values as an authorization oracle.
+  if (!cachedUser) {
     try {
       const res = await axios.get('/api/profile')
+      if (!res.data?.user) {
+        throw new Error('Unauthenticated')
+      }
       cachedUser = res.data.user
-      role = cachedUser?.role || 'Student'
-      localStorage.setItem('userRole', role)
     } catch {
+      cachedUser = null
       localStorage.removeItem('isAuthenticated')
       localStorage.removeItem('userRole')
       return next({ name: 'Login', replace: true })
     }
   }
+
+  const role = cachedUser?.role || 'Student'
+  localStorage.setItem('userRole', role)
 
   const isAdminRole = ['Admin', 'Super Admin', 'SuperAdmin'].includes(role)
   const isSuperAdminRole = ['Super Admin', 'SuperAdmin'].includes(role)
@@ -192,5 +196,8 @@ axios.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+export const setCachedUser = (user) => { cachedUser = user }
+export const clearCachedUser = () => { cachedUser = null }
 
 export default router

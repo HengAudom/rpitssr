@@ -3,9 +3,19 @@
     <Card padding="none" class="p-5 sm:p-8 shadow-soft-lg border border-slate-200/80 rounded-2xl sm:rounded-3xl">
       <!-- Form Header -->
       <div class="mb-4 sm:mb-6 space-y-1 sm:space-y-1.5">
-        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-          {{ isAdminMode ? (lang === 'kh' ? 'ចូលផ្ទាំងគ្រប់គ្រង' : 'Admin Sign In') : (lang === 'kh' ? 'ចូលប្រឡង' : 'Candidate Sign In') }}
-        </h2>
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+            {{ isAdminMode ? (lang === 'kh' ? 'ចូលផ្ទាំងគ្រប់គ្រង' : 'Admin Sign In') : (lang === 'kh' ? 'ចូលប្រឡង' : 'Candidate Sign In') }}
+          </h2>
+          <button
+            type="button"
+            @click="toggleMode"
+            class="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-300 hover:bg-slate-50 transition-all flex items-center gap-1 select-none"
+          >
+            <span class="material-symbols-outlined text-xs">{{ isAdminMode ? 'school' : 'admin_panel_settings' }}</span>
+            <span>{{ isAdminMode ? (lang === 'kh' ? 'ទម្រង់សិស្ស' : 'Student Mode') : (lang === 'kh' ? 'ទម្រង់ Admin' : 'Admin Mode') }}</span>
+          </button>
+        </div>
         <p class="text-xs sm:text-sm text-slate-500">
           {{ isAdminMode ? (lang === 'kh' ? 'សូមបញ្ចូលពាក្យសម្ងាត់របស់អ្នកគ្រប់គ្រងដើម្បីបន្ត' : 'Please enter admin password to continue') : (lang === 'kh' ? 'បញ្ចូលលេខសម្គាល់សិស្ស ដើម្បីចូលបន្ទប់ប្រឡង' : 'Enter your Student ID to access the examination portal') }}
         </p>
@@ -109,6 +119,7 @@ import Input from '../components/ui/Input.vue'
 import PasswordInput from '../components/ui/PasswordInput.vue'
 import Button from '../components/ui/Button.vue'
 import { useLang } from '../utils/useLang'
+import { setCachedUser } from '../router'
 
 const router = useRouter()
 const { lang } = useLang()
@@ -124,9 +135,23 @@ const errorMessage = ref('')
 const isAdminMode = ref(false)
 const passwordInputRef = ref(null)
 
-const identifierCache = new Map()
 let checkDebounceTimer = null
 let currentRequestId = 0
+
+// Robust student code pattern heuristic (SR..., RTC..., STD... or pure digits >= 4)
+const isStudentCode = (val) => {
+  if (!val) return false
+  const clean = val.trim()
+  return /^(?:rtc|sr|std)[\-_]?\d+/i.test(clean) || /^(?:rtc|sr)/i.test(clean) || /^\d{4,}$/.test(clean)
+}
+
+const toggleMode = () => {
+  isAdminMode.value = !isAdminMode.value
+  errorMessage.value = ''
+  if (isAdminMode.value) {
+    nextTick(() => passwordInputRef.value?.focus?.())
+  }
+}
 
 const onUsernameInput = () => {
   errorMessage.value = ''
@@ -136,41 +161,32 @@ const onUsernameInput = () => {
     return
   }
 
-  const lowerVal = val.toLowerCase()
-  if (lowerVal.includes('admin') || lowerVal.includes('super') || lowerVal.includes('dom')) {
-    isAdminMode.value = true
-  }
-
-  // Instant response from in-memory cache
-  if (identifierCache.has(lowerVal)) {
-    isAdminMode.value = identifierCache.get(lowerVal)
-  }
+  // Automatic format-based detection (zero account enumeration leaks)
+  const isStudent = isStudentCode(val)
+  isAdminMode.value = !isStudent
 
   const reqId = ++currentRequestId
-
   if (checkDebounceTimer) clearTimeout(checkDebounceTimer)
   checkDebounceTimer = setTimeout(async () => {
     try {
       const res = await axios.post('/api/check-identifier', { identifier: val })
-      // Guard against race conditions from out-of-order async responses
       if (reqId !== currentRequestId) return
-
-      // Set admin mode directly based on Database check & cache
-      const requiresPwd = Boolean(res.data?.requiresPassword)
-      identifierCache.set(lowerVal, requiresPwd)
-      isAdminMode.value = requiresPwd
+      isAdminMode.value = Boolean(res.data?.requiresPassword)
     } catch (e) {
       // Ignore background check errors
     }
-  }, 40)
+  }, 100)
 }
 
 onMounted(() => {
   const saved = localStorage.getItem('saved_login_username')
-  if (saved) {
+  // Only restore student IDs to prevent sensitive username harvesting (F-04 Remediation)
+  if (saved && isStudentCode(saved)) {
     form.username = saved
     rememberUsername.value = true
     onUsernameInput()
+  } else if (saved) {
+    localStorage.removeItem('saved_login_username')
   }
 })
 
@@ -218,14 +234,21 @@ const handleLogin = async () => {
       lang: lang.value
     })
 
-    // Handle Remember Identifier persistence
-    if (rememberUsername.value) {
+    // Handle Remember Identifier persistence (F-04 Remediation):
+    // Only persist Student IDs when explicitly requested by user.
+    // Never persist admin usernames in plaintext to prevent credential harvesting.
+    if (rememberUsername.value && !isAdminMode.value) {
       localStorage.setItem('saved_login_username', identifier)
     } else {
       localStorage.removeItem('saved_login_username')
     }
 
     localStorage.setItem('isAuthenticated', 'true')
+
+    const userObj = res.data.user || null
+    if (userObj) {
+      setCachedUser(userObj)
+    }
 
     const role = res.data.role || res.data.user?.role || (res.data.loginType === 'student' ? 'Student' : 'Admin')
     if (role) {
@@ -254,15 +277,7 @@ const handleLogin = async () => {
     }
 
     if (err.response?.status === 422 || err.response?.status === 404) {
-      if (rawMsg.includes('Student ID') || rawMsg.includes('not found') || rawMsg.includes('រកមិនឃើញ')) {
-        errorMessage.value = lang.value === 'kh'
-          ? 'រកមិនឃើញ Student ID នេះឡើយ'
-          : 'Student ID not found.'
-      } else if (rawMsg.includes('Invalid password') || rawMsg.includes('ពាក្យសម្ងាត់')) {
-        errorMessage.value = lang.value === 'kh'
-          ? 'ពាក្យសម្ងាត់មិនត្រឹមត្រូវ'
-          : 'Invalid password.'
-      } else if (rawMsg.includes('suspended') || rawMsg.includes('ផ្អាក')) {
+      if (rawMsg.includes('suspended') || rawMsg.includes('ផ្អាក')) {
         errorMessage.value = lang.value === 'kh'
           ? 'គណនីនេះត្រូវបានផ្អាកជាបណ្ដោះអាសន្ន'
           : 'Account is suspended.'
@@ -271,9 +286,10 @@ const handleLogin = async () => {
           ? 'គណនីសិស្សនេះមិនអាច Login បានទេ'
           : 'This student account is inactive.'
       } else {
+        // Uniform error response prevents account enumeration (F-01 Remediation)
         errorMessage.value = isAdminMode.value
           ? (lang.value === 'kh' ? 'ឈ្មោះគណនី ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ' : 'Invalid username or password.')
-          : (lang.value === 'kh' ? 'រកមិនឃើញ Student ID នេះឡើយ' : 'Student ID not found.')
+          : (lang.value === 'kh' ? 'លេខសម្គាល់សិស្ស ឬព័ត៌មានមិនត្រឹមត្រូវ' : 'Invalid Student ID or credentials.')
       }
     } else {
       if (rawMsg.includes('Database') || rawMsg.includes('MySQL') || rawMsg.includes('មូលដ្ឋានទិន្នន័យ') || err.response?.status === 503 || err.response?.status === 500) {

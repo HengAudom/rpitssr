@@ -555,7 +555,22 @@ class AdminController extends Controller
     public function publicSettings()
     {
         $settings = self::getSystemSettings();
-        $sessions = ExamSession::where('Status', 'Active')->orderBy('ExamDate', 'asc')->orderBy('StartTime', 'asc')->get();
+        $allowReg = filter_var($settings['allowRegistration'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        // Only expose active session names if self-registration is enabled (F-02 / Pentest Remediation).
+        // If registration is closed, do not disclose internal exam schedules to unauthenticated users.
+        $sessions = [];
+        if ($allowReg) {
+            $sessions = ExamSession::where('Status', 'Active')
+                ->orderBy('ExamDate', 'asc')
+                ->orderBy('StartTime', 'asc')
+                ->get()
+                ->map(fn($s) => [
+                    'SessionId' => $s->SessionId,
+                    'SessionName' => $s->SessionName,
+                ]);
+        }
+
         return response()->json([
             'settings' => [
                 'institutionName' => $settings['institutionName'] ?? 'RPITSSR',
@@ -564,18 +579,9 @@ class AdminController extends Controller
                 'logoUrl' => $settings['logoUrl'] ?? '/logo.png',
                 'academicYear' => $settings['academicYear'] ?? '2026-2027',
                 'defaultLanguage' => $settings['defaultLanguage'] ?? 'kh',
-                'allowRegistration' => (bool)($settings['allowRegistration'] ?? false),
-                'forceStrongPassword' => (bool)($settings['forceStrongPassword'] ?? true),
-                'antiCheatPause' => (bool)($settings['antiCheatPause'] ?? true),
-                'autosaveIntervalSeconds' => (int)($settings['autosaveIntervalSeconds'] ?? 3),
+                'allowRegistration' => $allowReg,
             ],
-            'sessions' => $sessions->map(fn($s) => [
-                'SessionId' => $s->SessionId,
-                'SessionName' => $s->SessionName,
-                'ExamDate' => $s->ExamDate,
-                'StartTime' => $s->StartTime,
-                'EndTime' => $s->EndTime,
-            ]),
+            'sessions' => $sessions,
         ]);
     }
 

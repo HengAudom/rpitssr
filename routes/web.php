@@ -84,16 +84,16 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/schedule-days-years', [AdminController::class, 'getScheduleDaysYears']);
     Route::post('/api/admin/schedule-days-years', [AdminController::class, 'saveScheduleDaysYears']);
 
-    Route::get('/api/admin/audit-logs', [AdminController::class, 'auditLogs']);
-    Route::delete('/api/admin/audit-logs', [AdminController::class, 'clearAuditLogs']);
-    Route::get('/api/admin/system-settings', [AdminController::class, 'systemSettings']);
-    Route::post('/api/admin/system-settings', [AdminController::class, 'saveSystemSettings']);
 });
 
 // ─── Super Admin Dedicated Endpoints ──────────────────────────────────────────
 Route::middleware(['auth', 'super_admin'])->group(function () {
     Route::get('/api/admin/roles-permissions', [AdminController::class, 'rolesPermissions']);
     Route::post('/api/admin/roles-permissions', [AdminController::class, 'saveRolesPermissions']);
+    Route::get('/api/admin/audit-logs', [AdminController::class, 'auditLogs']);
+    Route::delete('/api/admin/audit-logs', [AdminController::class, 'clearAuditLogs']);
+    Route::get('/api/admin/system-settings', [AdminController::class, 'systemSettings']);
+    Route::post('/api/admin/system-settings', [AdminController::class, 'saveSystemSettings']);
 });
 
 // ─── Block Internal Build Manifest from Direct Public Exposure (Finding #4) ───

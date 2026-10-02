@@ -115,23 +115,24 @@ class AuthController extends Controller
             ]);
         }
 
-        // Student pattern (RTC-, or SR-) does not require password
-        if (preg_match('/^(?:rtc-|sr-)/i', $identifier)) {
+        // Student pattern (SR, RTC, STD prefixes or pure numeric ID) does not require password.
+        // Never query the database here to prevent account/username enumeration (F-01 / Pentest Remediation).
+        $isStudentPattern = preg_match('/^(?:rtc|sr|std)[\-_]?\d+/i', $identifier)
+            || preg_match('/^(?:rtc|sr)/i', $identifier)
+            || ctype_digit($identifier);
+
+        if ($isStudentPattern) {
             return response()->json([
                 'status' => 'ok',
                 'requiresPassword' => false,
             ]);
         }
 
-        $clean = strtolower($identifier);
-
-        // Only exact admin username or standard alias, NEVER partial prefix matching (Pentest Finding #5)
-        $isAdmin = in_array($clean, ['admin', 'superadmin', 'super admin', 'administrator', 'admindom', 'domadmin'])
-            || Admin::whereRaw('LOWER(Username) = ?', [$clean])->exists();
-
+        // All non-student identifiers (standard usernames) require password uniformly,
+        // without leaking whether the account exists in the database.
         return response()->json([
             'status' => 'ok',
-            'requiresPassword' => (bool)$isAdmin,
+            'requiresPassword' => true,
         ]);
     }
 

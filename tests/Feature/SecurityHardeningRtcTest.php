@@ -123,7 +123,7 @@ class SecurityHardeningRtcTest extends TestCase
     }
 
     /**
-     * 6. Test checkIdentifier does NOT leak user enumeration (only requiresPassword).
+     * 6. Test checkIdentifier does NOT leak user enumeration (only requiresPassword based on identifier format).
      */
     public function test_check_identifier_anti_enumeration(): void
     {
@@ -140,12 +140,16 @@ class SecurityHardeningRtcTest extends TestCase
             'LastName' => 'Test',
         ]);
 
-        // Student pattern returns false without exists or role
+        // Student pattern returns false without exists or role (both existing & non-existing)
         $resStudent = $this->postJson('/api/check-identifier', ['identifier' => 'SR2026888']);
         $resStudent->assertStatus(200);
         $resStudent->assertJson(['requiresPassword' => false]);
         $this->assertArrayNotHasKey('role', $resStudent->json());
         $this->assertArrayNotHasKey('exists', $resStudent->json());
+
+        $resStudentNonExistent = $this->postJson('/api/check-identifier', ['identifier' => 'SR9999999']);
+        $resStudentNonExistent->assertStatus(200);
+        $resStudentNonExistent->assertJson(['requiresPassword' => false]);
 
         // Admin returns true without exists or role
         $resAdmin = $this->postJson('/api/check-identifier', ['identifier' => 'myadmin']);
@@ -154,10 +158,31 @@ class SecurityHardeningRtcTest extends TestCase
         $this->assertArrayNotHasKey('role', $resAdmin->json());
         $this->assertArrayNotHasKey('exists', $resAdmin->json());
 
-        // Random non-existent identifier returns false
+        // Any non-student username (even non-existent) returns true uniformly to prevent username enumeration (F-01)
         $resRandom = $this->postJson('/api/check-identifier', ['identifier' => 'random_unknown_user']);
         $resRandom->assertStatus(200);
-        $resRandom->assertJson(['requiresPassword' => false]);
+        $resRandom->assertJson(['requiresPassword' => true]);
+        $this->assertArrayNotHasKey('role', $resRandom->json());
+        $this->assertArrayNotHasKey('exists', $resRandom->json());
+    }
+
+    /**
+     * 6b. Test public-settings does not disclose internal exam schedules or configs (F-02).
+     */
+    public function test_public_settings_anti_disclosure(): void
+    {
+        $response = $this->getJson('/api/public-settings');
+        $response->assertStatus(200);
+
+        $json = $response->json();
+
+        // Must not expose internal examination configs
+        $this->assertArrayNotHasKey('antiCheatPause', $json['settings'] ?? []);
+        $this->assertArrayNotHasKey('autosaveIntervalSeconds', $json['settings'] ?? []);
+        $this->assertArrayNotHasKey('forceStrongPassword', $json['settings'] ?? []);
+
+        // When allowRegistration is false (default), sessions must be empty
+        $this->assertEmpty($json['sessions'] ?? []);
     }
 
     /**
